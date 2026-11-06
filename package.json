@@ -17,10 +17,13 @@
     "server"
   ],
   "devDependencies": {
-    "prettier": "^3.3.3"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "prettier": "^3.3.3",
+    "typescript-eslint": "^8.72.1"
   },
   "engines": {
-    "node": ">=20",
+    "node": "^20.19.0 || ^22.13.0 || >=24",
     "npm": ">=9"
   }
 }
