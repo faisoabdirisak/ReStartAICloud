@@ -181,68 +181,88 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 ---
 
-### ST-4 — Progress Dashboard & Guest Demo [ ] pending
+### ST-4 — Progress Dashboard & Guest Demo [-] in progress
+
+> **Numbering note:** Our implementation work referred to session persistence as "ST-3", but in
+> this plan ST-3 is *Opportunity Cards & 30-Day Plans UI* (already done) and ST-4 is this stage.
+> The persistence work (HttpOnly cookie, `GET /me` restore, `PATCH /me/progress`, `PATCH /me/select`,
+> `DELETE /me`) was delivered as part of completing ST-3 in the plan's own terms. The items below
+> reflect what was additionally delivered at the ST-4 level.
 
 **Intent:** Add the session progress dashboard, a guest demo mode with fictional personas, and the onboarding welcome screen so the app is judge-ready without real user data.
 
 **Expected Outcomes:**
-- `Dashboard` page shows: completion % ring, streak counter, list of in-progress vs completed plan items, "Continue" CTA per opportunity
-- `GuestDemoBar` banner at top of every page when in demo mode, with 3 persona switcher buttons
-- Each demo persona has a pre-seeded `Session` in the DB with full opportunity + plan data
-- `OnboardingModal` appears on first visit (localStorage flag), explains the app in 3 slides with motion transitions
-- Dark/light theme toggle persists to `localStorage`
-- All demo data is clearly labelled fictional (disclaimer in UI)
+- [x] `Dashboard` page shows: completion % ring, per-opportunity progress bars, steps-complete counts, focus/select CTA — implemented as `DashboardPreview` component, rendered on the Dashboard nav page
+- [ ] `Dashboard` page shows: streak counter — **not yet implemented**
+- [x] `GuestDemoBar` banner at top of every page when in demo mode, with 3 persona switcher buttons
+- [x] `OnboardingModal` appears on first visit (localStorage flag), explains the app in 3 slides with motion transitions
+- [x] Dark/light theme toggle persists to `localStorage` — confirmed in `ThemeContext.tsx`
+- [x] All demo data is clearly labelled fictional (disclaimer in UI) — "Demo mode — fictional data only" banner
+- [x] Each demo persona has pre-seeded data available — `prisma/seed.ts` created with Maria/James/Aisha; note: guest demo currently uses in-memory mock data (`mockData.ts`) while `seed.ts` seeds the DB for the server-backed path
+- [ ] Each demo persona served from a DB-seeded `Session` via the cookie/session route — `seed.ts` exists but `GuestDemoBar` loads `MOCK_OPPORTUNITIES` from client state, not via the server session routes; needs wiring
+
+> **Session route note:** the plan specifies `GET /api/sessions/:id`; the implementation uses
+> `GET /api/sessions/me` (cookie-identified, no ID in URL). This is intentional — there is no
+> authentication and exposing numeric/CUID session IDs in URLs would allow enumeration. The
+> cookie-based route satisfies the same functional requirement.
 
 **Todo List:**
-1. Create `Dashboard` page component with completion metrics and plan item list
-2. Create `GET /api/sessions/:id` route returning full session with progress
-3. Seed script `prisma/seed.ts` — 3 fictional personas with full opportunity + plan data
-4. Create `GuestDemoBar` component with persona switcher; store active demo session in React context
-5. Create `OnboardingModal` with 3 slides (Motion `AnimatePresence` transitions)
-6. Persist theme preference to `localStorage` in `ThemeProvider`
-7. Add disclaimer copy to `GuestDemoBar` and footer
-8. Write tests for `Dashboard` progress calculations and seed data shape
+1. [x] Create `Dashboard` page component with completion metrics and plan item list
+2. [x] Create session restore route — implemented as `GET /api/sessions/me` (see note above)
+3. [x] Seed script `prisma/seed.ts` — 3 fictional personas (Maria, James, Aisha) with full opportunity + plan data
+4. [x] Create `GuestDemoBar` component with persona switcher; demo session held in React state (`useSession` hook)
+5. [x] Create `OnboardingModal` with 3 slides (`AnimatePresence` transitions)
+6. [x] Persist theme preference to `localStorage` in `ThemeProvider`
+7. [x] Add disclaimer copy to `GuestDemoBar`
+8. [ ] Wire `GuestDemoBar` persona selection to load DB-seeded sessions via server routes
+9. [ ] Add streak counter to `DashboardPreview`
+10. [ ] Write tests for `Dashboard` progress calculations and seed data shape
 
 **Relevant Context:**
-- Fictional personas: e.g. "Maria — former retail manager", "James — laid-off driver", "Aisha — ex-hospitality worker"
-- Demo sessions are seeded at `prisma/seed.ts` and referenced by hardcoded IDs in `GuestDemoBar`
+- Fictional personas: Maria — former retail manager, James — laid-off delivery driver, Aisha — ex-hospitality worker
+- `prisma/seed.ts` uses stable cookie tokens (`demo-token-maria-*`, etc.) so sessions survive server restarts
+- User manually verified (06 Nov 2026): data persists when navigating between Home, Opportunities, and Dashboard pages
 
-**Status:** [ ] pending
+**Status:** [-] in progress — core dashboard, onboarding, demo bar, theme persistence, and seed script done; streak counter, DB-backed demo sessions, and dashboard tests remain
 
 ---
 
-### ST-5 — Quality, Security & CI/CD [ ] pending
+### ST-5 — Quality, Security & CI/CD [-] in progress
 
 **Intent:** Ensure the project meets IBM AI Challenge standards for code quality, security, testing coverage, and automated deployment.
 
 **Expected Outcomes:**
-- GitHub Actions workflow runs on every PR: lint, typecheck, Vitest (unit + integration), build
-- CodeQL analysis workflow runs on push to `master`
-- All Vitest suites pass with ≥80% coverage on `server/src/`
-- Helmet + rate-limit headers present on all API responses
-- `.env` values never committed; `GEMINI_API_KEY` only used server-side
-- `docs/ARCHITECTURE.md` — system diagram + data flow
-- `docs/API.md` — all endpoints documented with request/response shapes
-- `docs/CONTRIBUTING.md` — setup instructions
-- `README.md` — project overview, screenshots, judge quick-start with Guest Demo
+- [x] GitHub Actions CI workflow runs on every PR: lint, typecheck, Vitest, build — `.github/workflows/ci.yml` created
+- [x] CodeQL analysis workflow runs on push to `master` — `.github/workflows/codeql.yml` created
+- [x] Helmet middleware present on all API responses — `app.use(helmet())` in `server/src/index.ts`
+- [x] `GEMINI_API_KEY` only used server-side; `.env` excluded from git via `.gitignore`
+- [x] Single-process deployment configured — Express serves `client/dist` as static files when `NODE_ENV=production` (`server/src/index.ts`)
+- [x] Integration test for `POST /api/analyze` — 9 supertest tests in `analyze.test.ts` using mocked Gemini; already committed in `d2409e9`
+- [x] Route security assertions — `sessions.test.ts` covers cookie isolation, ownership enforcement, and token non-disclosure; `analyze.test.ts` covers secret-leak prevention; all committed
+- [ ] All Vitest suites pass with ≥80% coverage on `server/src/` — coverage config not yet added; CI runs tests but does not enforce threshold
+- [ ] `docs/ARCHITECTURE.md` — not yet created
+- [ ] `docs/API.md` — not yet created
+- [ ] `docs/CONTRIBUTING.md` — not yet created
+- [ ] `README.md` — not yet created (a write was interrupted mid-session; file confirmed absent)
 
 **Todo List:**
-1. Create `.github/workflows/ci.yml` — lint, typecheck, test, build jobs
-2. Create `.github/workflows/codeql.yml` — CodeQL analysis for JS/TS
-3. Add `helmet` middleware to Express app
-4. Audit all routes: confirm no secrets in responses, no raw error messages leaked
-5. Add Vitest coverage config; enforce 80% threshold in CI
-6. Write integration test for `POST /api/analyze` using a mocked Gemini response
-7. Write `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/CONTRIBUTING.md`
-8. Write `README.md` with overview, feature list, Guest Demo instructions, tech stack badge table
-9. Configure deployment: `client/` builds to `dist/`, Express serves static + API from single process
+1. [x] Create `.github/workflows/ci.yml` — lint, typecheck, test, build jobs
+2. [x] Create `.github/workflows/codeql.yml` — CodeQL analysis for JS/TS
+3. [x] Add `helmet` middleware to Express app
+4. [x] Audit all routes: no secrets in responses, no raw errors leaked — enforced by tests (`cookieToken` non-disclosure, `GEMINI_API_KEY` non-leak, 401/403 ownership checks) and middleware (Helmet, Zod, rate-limit); no separate written audit doc produced
+5. [ ] Add Vitest coverage config; enforce 80% threshold in CI
+6. [x] Write integration test for `POST /api/analyze` using a mocked Gemini response — `analyze.test.ts` has 10 supertest tests under `POST /api/analyze` + 1 `GET /health` = 11 total; all mock `vi.mock('../lib/gemini.js')` so no real API key is needed in CI (committed in `f27e94c`, expanded in `d2409e9`)
+7. [ ] Write `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/CONTRIBUTING.md`
+8. [ ] Write `README.md` with overview, feature list, Guest Demo instructions, tech stack badge table
+9. [x] Configure deployment: Express serves `client/dist` as static files from `server/src/index.ts` when `NODE_ENV=production`
 
 **Relevant Context:**
 - `Helmet` defaults are sufficient; no custom CSP needed for MVP
 - Single-process deployment: Express serves `client/dist` as static files from `server/src/index.ts`
 - CodeQL default query suite for JavaScript is sufficient
+- Test suite (committed in `d2409e9`): analyze.test.ts 11 · sessions.test.ts 14 · scoring.test.ts 6 · index.test.ts 1 = **32 server** · shared 10 · client 9 (AppShell 4 + components 5) = **51 total**
 
-**Status:** [ ] pending
+**Status:** [-] in progress — CI/CD workflows, Helmet, static serving, integration tests, and route audit assertions done; coverage enforcement threshold, docs folder, and README remain
 
 ---
 
