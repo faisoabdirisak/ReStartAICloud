@@ -9,7 +9,7 @@
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Opportunity, AnalyzeRequest } from '@restart-ai/shared';
-import { computeStreak } from '@restart-ai/shared';
+import { computeStreak, createDemoOpportunities, type DemoPersonaId } from '@restart-ai/shared';
 import {
   analyzeProfile,
   restoreSession,
@@ -19,7 +19,7 @@ import {
   loadDemoSession,
   ApiError,
 } from '../lib/api';
-import { MOCK_OPPORTUNITIES, MOCK_PERSONAS } from '../data/mockData';
+import { MOCK_PERSONAS } from '../data/mockData';
 
 export type SessionStatus =
   | 'restoring'   // checking cookie on mount
@@ -58,6 +58,12 @@ export function useSession(): UseSessionReturn {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof AnalyzeRequest, string[]>> | undefined>(undefined);
   const [lastFormValues, setLastFormValues] = useState<Partial<AnalyzeRequest> | undefined>(undefined);
 
+  const demoRequestRef = useRef(0);
+  const activeDemoRef = useRef<DemoPersonaId | null>(null);
+  const demoCacheRef = useRef<Partial<Record<DemoPersonaId, {
+    opportunities: Opportunity[]; selectedOpportunityId: string | null;
+  }>>>({});
+
   // Saved live session (to restore after demo)
   const liveSessionRef = useRef<{
     sessionId: string;
@@ -71,6 +77,10 @@ export function useSession(): UseSessionReturn {
     restoreSession()
       .then((session) => {
         if (cancelled) return;
+        if (activeDemoRef.current) {
+          if (session) liveSessionRef.current = { sessionId: session.id, opportunities: session.opportunities, selectedOpportunityId: session.selectedOpportunityId ?? null };
+          return;
+        }
         if (session) {
           setSessionId(session.id);
           setOpportunities(session.opportunities);
@@ -81,7 +91,7 @@ export function useSession(): UseSessionReturn {
         }
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && !activeDemoRef.current) {
           setApiError('Could not restore your saved session. Please refresh to retry.');
           setStatus('error');
         }
@@ -114,42 +124,39 @@ export function useSession(): UseSessionReturn {
     }
   }, []);
 
-  // ── Toggle plan item ──────────────────────────────────────────────────────
+  // Demo interactions stay in memory; only live items are written to the API.
   const togglePlanItem = useCallback(async (itemId: string, completed: boolean) => {
-    // Optimistic update
-    setOpportunities((prev) =>
-      prev.map((opp) => ({
-        ...opp,
-        planItems: opp.planItems.map((item) =>
-          item.id === itemId ? { ...item, isCompleted: completed } : item
-        ),
-      }))
-    );
-
+    const previous = opportunities.flatMap((opp) => opp.planItems).find((item) => item.id === itemId);
+    if (!previous) return;
+    const timestamp = completed ? new Date() : null;
+    setOpportunities((prev) => prev.map((opp) => ({ ...opp, planItems: opp.planItems.map((item) =>
+      item.id === itemId ? { ...item, isCompleted: completed, completedAt: timestamp } : item),
+    })));
+    if (activeDemoRef.current) return;
+    setApiError(null);
     try {
       await updateProgress({ planItemId: itemId, isCompleted: completed });
     } catch {
-      // Revert on failure
-      setOpportunities((prev) =>
-        prev.map((opp) => ({
-          ...opp,
-          planItems: opp.planItems.map((item) =>
-            item.id === itemId ? { ...item, isCompleted: !completed } : item
-          ),
-        }))
-      );
+      if (activeDemoRef.current) return;
+      setOpportunities((prev) => prev.map((opp) => ({ ...opp, planItems: opp.planItems.map((item) =>
+        item.id === itemId ? previous : item),
+      })));
+      setApiError('Could not save this task. Please try again.');
     }
-  }, []);
+  }, [opportunities]);
 
-  // ── Select opportunity ────────────────────────────────────────────────────
   const selectOpp = useCallback(async (id: string | null) => {
+    const previous = selectedOpportunityId;
     setSelectedOpportunityId(id);
+    if (activeDemoRef.current) return;
     try {
       await selectOpportunity({ opportunityId: id });
     } catch {
-      // non-critical — selection reverts on next restore
+      if (activeDemoRef.current) return;
+      setSelectedOpportunityId(previous);
+      setApiError('Could not save your selection. Please try again.');
     }
-  }, []);
+  }, [selectedOpportunityId]);
 
   // ── Streak (memoised — recomputed only when opportunities change) ─────────
   const streak = useMemo(() => {
@@ -157,51 +164,64 @@ export function useSession(): UseSessionReturn {
     return computeStreak(allItems);
   }, [opportunities]);
 
-  // ── Demo ──────────────────────────────────────────────────────────────────
+  // Keep persona edits separate and ignore stale requests after switching/exiting.
   const startDemo = useCallback((personaId: string) => {
-    const persona = MOCK_PERSONAS.find((p) => p.id === personaId);
-    if (!persona) return;
-
-    // Stash live session before overwriting state
-    if (status === 'ready' && sessionId) {
+    if (!MOCK_PERSONAS.some((persona) => persona.id === personaId)) return;
+    const id = personaId as DemoPersonaId;
+    if (activeDemoRef.current && status === 'demo') {
+      demoCacheRef.current[activeDemoRef.current] = { opportunities, selectedOpportunityId };
+    } else if (!activeDemoRef.current && status === 'ready' && sessionId) {
       liveSessionRef.current = { sessionId, opportunities, selectedOpportunityId };
     }
-
-    setActivePersonaId(personaId);
+    activeDemoRef.current = id;
+    const requestId = ++demoRequestRef.current;
+    setApiError(null);
+    setActivePersonaId(id);
+    const cached = demoCacheRef.current[id];
+    if (cached) {
+      setOpportunities(cached.opportunities);
+      setSelectedOpportunityId(cached.selectedOpportunityId);
+      setStatus('demo');
+      return;
+    }
     setStatus('loading');
-
-    // Try to load the DB-seeded session; fall back to in-memory mock if seed not run
-    loadDemoSession(personaId as 'maria' | 'james' | 'aisha')
-      .then((session) => {
-        setOpportunities(session ? session.opportunities : MOCK_OPPORTUNITIES);
-        setSelectedOpportunityId(session?.selectedOpportunityId ?? null);
-        setStatus('demo');
-      })
-      .catch(() => {
-        // Network error — fall back to mock data so demo always works
-        setOpportunities(MOCK_OPPORTUNITIES);
-        setSelectedOpportunityId(null);
-        setStatus('demo');
-      });
+    const show = (items: Opportunity[], selection: string | null) => {
+      if (demoRequestRef.current !== requestId || activeDemoRef.current !== id) return;
+      setOpportunities(items);
+      setSelectedOpportunityId(selection);
+      setStatus('demo');
+    };
+    loadDemoSession(id)
+      .then((session) => show(session?.opportunities ?? createDemoOpportunities(id), session?.selectedOpportunityId ?? null))
+      .catch(() => show(createDemoOpportunities(id), null));
   }, [status, sessionId, opportunities, selectedOpportunityId]);
 
   const stopDemo = useCallback(() => {
-    setActivePersonaId(null);
-    const live = liveSessionRef.current;
-    if (live) {
-      setSessionId(live.sessionId);
-      setOpportunities(live.opportunities);
-      setSelectedOpportunityId(live.selectedOpportunityId);
-      setStatus('ready');
-    } else {
-      setOpportunities([]);
-      setSelectedOpportunityId(null);
-      setStatus('empty');
+    if (activeDemoRef.current && status === 'demo') {
+      demoCacheRef.current[activeDemoRef.current] = { opportunities, selectedOpportunityId };
     }
-  }, []);
+    ++demoRequestRef.current;
+    activeDemoRef.current = null;
+    setActivePersonaId(null);
+    setApiError(null);
+    const live = liveSessionRef.current;
+    setSessionId(live?.sessionId ?? null);
+    setOpportunities(live?.opportunities ?? []);
+    setSelectedOpportunityId(live?.selectedOpportunityId ?? null);
+    setStatus(live ? 'ready' : 'empty');
+  }, [status, opportunities, selectedOpportunityId]);
 
   // ── Start over (with confirmation in UI layer) ────────────────────────────
   const startOver = useCallback(async () => {
+    if (activeDemoRef.current) {
+      ++demoRequestRef.current;
+      const id = activeDemoRef.current;
+      delete demoCacheRef.current[id];
+      setOpportunities(createDemoOpportunities(id));
+      setSelectedOpportunityId(null);
+      setStatus('demo');
+      return;
+    }
     try {
       await clearSession();
     } catch {

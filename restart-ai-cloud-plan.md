@@ -271,3 +271,11 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 **Status:** [x] ST-5 implementation complete locally; review, commit, push, rerun GitHub Actions, and repeat the browser acceptance checks before release.
 
 ---
+
+## Post-ST-5 demo regression fix — 6 November 2026
+
+- Fixed the shared fallback that showed Maria's results under every persona.
+- Seeded and offline demos now use the same nine distinct opportunities and role-specific plans.
+- Demo task completion and focus selection stay local, remain separate by persona within the tab, and never call live mutation routes.
+- Persona switching and exiting ignore stale in-flight responses; late live restoration cannot overwrite demo mode.
+- Added tests for all-week checkboxes, offline fallback, request ordering, live-session protection, and repeatable demo seeding against disposable SQLite.

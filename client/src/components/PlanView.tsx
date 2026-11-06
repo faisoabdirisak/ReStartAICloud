@@ -84,7 +84,7 @@ export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) 
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar size={14} className="text-primary" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    Week {w} · Days {w * 7 - 6}–{w * 7}
+                    Week {w} · Days {w * 7 - 6}–{w === 4 ? 30 : w * 7}
                   </h3>
                 </div>
                 <ul className="space-y-2">
@@ -99,6 +99,7 @@ export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) 
                       <button
                         onClick={() => onToggleItem(item.id, !item.isCompleted)}
                         className="mt-0.5 flex-shrink-0 text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors"
+                        aria-pressed={item.isCompleted}
                         aria-label={`Mark "${item.title}" as ${item.isCompleted ? 'incomplete' : 'complete'}`}
                       >
                         {item.isCompleted ? (

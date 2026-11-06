@@ -58,3 +58,26 @@ it('persists results, selection and progress, enforces ownership, and deletes on
   expect((await other.get('/api/sessions/me')).status).toBe(200);
   expect(await prisma.session.count()).toBe(1);
 });
+
+it('seeds distinct persona plans idempotently without changing live guest records', async () => {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const before = await prisma.session.findMany({ include: { opportunities: true } });
+  for (let run = 0; run < 2; run++) {
+    execFileSync(process.execPath, ['--import', 'tsx', path.join(root, 'prisma/seed.ts')],
+      { cwd: root, env: process.env, stdio: 'pipe', timeout: 20_000 });
+  }
+  const titles = new Set<string>();
+  for (const personaId of ['maria', 'james', 'aisha']) {
+    const res = await request(app).post('/api/sessions/demo').send({ personaId });
+    expect(res.status).toBe(200);
+    expect(res.body.opportunities).toHaveLength(3);
+    res.body.opportunities.forEach((opp: { title: string; planItems: { title: string }[] }) => {
+      titles.add(opp.title); expect(opp.planItems[0].title).toContain(opp.title);
+    });
+  }
+  expect(titles.size).toBe(9);
+  expect(await prisma.session.count()).toBe(before.length + 3);
+  for (const session of before) {
+    expect(await prisma.session.findUnique({ where: { id: session.id }, include: { opportunities: true } })).toEqual(session);
+  }
+}, 30_000);

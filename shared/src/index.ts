@@ -192,3 +192,5 @@ export function computeStreak(
 
   return streak;
 }
+
+export { createDemoOpportunities, DEMO_PERSONA_IDS, type DemoPersonaId } from './demo.js';

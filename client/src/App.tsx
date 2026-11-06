@@ -58,6 +58,7 @@ function AppContent() {
   };
 
   const handleSelectPersona = (id: string) => {
+    setActivePlanId(null);
     startDemo(id);
     setPage('opportunities');
   };
@@ -149,7 +150,7 @@ function AppContent() {
                         {demoActive && activePersonaId
                           ? `Demo results for ${MOCK_PERSONAS.find((p) => p.id === activePersonaId)?.name} · `
                           : ''}
-                        Feasibility scores computed by server-side TypeScript
+                        {demoActive ? 'Fictional fit scores · Demo progress stays in this tab' : 'Fit scores out of 100 · Plan progress is tracked separately'}
                       </p>
                     </div>
                     {!demoActive && (

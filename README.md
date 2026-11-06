@@ -69,7 +69,7 @@ If port 3001 is occupied, check the existing server instead of launching another
 
 Choose Try Demo, switch between the three personas, open a plan, and view the dashboard.
 The client requests fictional seeded sessions from `/api/sessions/demo`. If unavailable, it uses bundled fictional mock data.
-Demo checkbox changes are temporary; they do not overwrite a live session or the shared seed records.
+Demo checkbox changes and selections are kept separately for each persona while the tab is open; they do not overwrite a live session or the shared seed records. Offline fallback data is persona-specific.
 Exit the demo to return to the saved live session.
 
 ## Quality checks
