@@ -118,7 +118,7 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 ---
 
-### ST-2 — Core AI Pipeline [ ] pending
+### ST-2 — Core AI Pipeline [x] done
 
 **Intent:** Build the secure server-side AI pipeline so the client can submit a profile and receive structured, validated opportunity data from Gemini.
 

@@ -6,16 +6,31 @@ describe('AnalyzeRequestSchema', () => {
     const result = AnalyzeRequestSchema.safeParse({
       currentRole: 'Retail Manager',
       skills: 'Customer service, inventory management',
+      experience: '5 years managing a team of 12',
       location: 'Chicago, IL',
+      startupBudget: 500,
       goals: 'Find a remote role with better work-life balance',
     });
     expect(result.success).toBe(true);
+  });
+
+  it('defaults startupBudget to 0 when omitted', () => {
+    const result = AnalyzeRequestSchema.safeParse({
+      currentRole: 'Driver',
+      skills: 'Logistics',
+      experience: '3 years',
+      location: 'Houston',
+      goals: 'New career',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.startupBudget).toBe(0);
   });
 
   it('rejects empty currentRole', () => {
     const result = AnalyzeRequestSchema.safeParse({
       currentRole: '',
       skills: 'Something',
+      experience: '1 year',
       location: 'Chicago',
       goals: 'Goal',
     });

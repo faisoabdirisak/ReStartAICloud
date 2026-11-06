@@ -49,11 +49,49 @@ export type Session = z.infer<typeof SessionSchema>;
 export const AnalyzeRequestSchema = z.object({
   currentRole: z.string().min(1).max(200),
   skills: z.string().min(1).max(1000),
+  experience: z.string().min(1).max(500),
   location: z.string().min(1).max(200),
+  /** USD, 0 = no budget / bootstrapping */
+  startupBudget: z.number().int().min(0).max(1_000_000).default(0),
+  interests: z.string().max(500).optional(),
   constraints: z.string().max(1000).optional(),
   goals: z.string().min(1).max(1000),
 });
 export type AnalyzeRequest = z.infer<typeof AnalyzeRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// Raw AI opportunity shape (what Gemini returns — scores NOT included/trusted)
+// ---------------------------------------------------------------------------
+export const RawPlanItemSchema = z.object({
+  day: z.number().int().min(1).max(30),
+  week: z.number().int().min(1).max(4),
+  title: z.string().min(1).max(200),
+  description: z.string().max(500).optional(),
+  resourceUrl: z.string().url().optional(),
+});
+
+export const RawOpportunitySchema = z.object({
+  title: z.string().min(1).max(200),
+  category: z.enum(['career-pivot', 'upskilling', 'micro-business']),
+  summary: z.string().max(500),
+  reasoning: z.string().max(2000),
+  estimatedCostUSD: z.number().int().min(0).optional(),
+  risks: z.string().max(500).optional(),
+  /** AI signals used only as inputs to server-side scoring */
+  signals: z.object({
+    skillFitPct: z.number().int().min(0).max(100),
+    affordabilityPct: z.number().int().min(0).max(100),
+    launchTimeDays: z.number().int().min(1).max(365),
+    complexityScore: z.number().int().min(1).max(10),
+  }),
+  planItems: z.array(RawPlanItemSchema).length(12),
+});
+export type RawOpportunity = z.infer<typeof RawOpportunitySchema>;
+
+export const RawAIResponseSchema = z.object({
+  opportunities: z.array(RawOpportunitySchema).length(3),
+});
+export type RawAIResponse = z.infer<typeof RawAIResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Progress Update (client → server)
