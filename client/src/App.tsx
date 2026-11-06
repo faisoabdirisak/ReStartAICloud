@@ -9,9 +9,8 @@ import { PlanView } from './components/PlanView';
 import { SkeletonCards } from './components/SkeletonCards';
 import { DashboardPreview } from './components/DashboardPreview';
 import { OnboardingModal } from './components/OnboardingModal';
-import { MOCK_OPPORTUNITIES, MOCK_PERSONAS } from './data/mockData';
-import { analyzeProfile, ApiError } from './lib/api';
-import type { Opportunity, AnalyzeRequest } from '@restart-ai/shared';
+import { MOCK_PERSONAS } from './data/mockData';
+import { useSession } from './hooks/useSession';
 
 type NavPage = 'home' | 'opportunities' | 'dashboard';
 
@@ -19,20 +18,24 @@ const ONBOARDING_KEY = 'restart-ai-onboarding-done';
 
 function AppContent() {
   const [page, setPage] = useState<NavPage>('home');
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof AnalyzeRequest, string[]>> | undefined
-  >(undefined);
-  // Preserve form data across failed submissions
-  const [lastFormValues, setLastFormValues] = useState<Partial<AnalyzeRequest> | undefined>(
-    undefined
-  );
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [demoActive, setDemoActive] = useState(false);
-  const [activePersonaId, setActivePersonaId] = useState<string | null>(null);
+
+  const {
+    status,
+    opportunities,
+    selectedOpportunityId,
+    activePersonaId,
+    apiError,
+    fieldErrors,
+    lastFormValues,
+    submitProfile,
+    togglePlanItem,
+    selectOpp,
+    startDemo,
+    stopDemo,
+    startOver,
+  } = useSession();
 
   useEffect(() => {
     const done = localStorage.getItem(ONBOARDING_KEY);
@@ -44,93 +47,53 @@ function AppContent() {
     setShowOnboarding(false);
   };
 
-  /** Navigate to the form page */
   const handleGetStarted = () => {
     setPage('opportunities');
-    setOpportunities([]);
-    setApiError(null);
-    setFieldErrors(undefined);
-    setLastFormValues(undefined);
-    setDemoActive(false);
-    setActivePersonaId(null);
   };
 
-  /** Submit profile to real API */
-  const handleFormSubmit = async (data: AnalyzeRequest) => {
-    setLoading(true);
-    setApiError(null);
-    setFieldErrors(undefined);
-    setLastFormValues(data);
-
-    try {
-      const session = await analyzeProfile(data);
-      setOpportunities(session.opportunities);
-      setApiError(null);
-      setLastFormValues(undefined);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setApiError(err.message);
-        setFieldErrors(err.details as Partial<Record<keyof AnalyzeRequest, string[]>> | undefined);
-      } else {
-        setApiError('An unexpected error occurred. Please try again.');
-      }
-      // Keep opportunities empty — never silently show demo data on real failure
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /** Demo persona — loads mock data without a real API call */
-  const handleSelectPersona = (id: string) => {
-    const persona = MOCK_PERSONAS.find((p) => p.id === id);
-    if (!persona) return;
-    setActivePersonaId(id);
-    setDemoActive(true);
+  const handleTryDemo = () => {
+    startDemo('maria');
     setPage('opportunities');
-    setApiError(null);
-    setFieldErrors(undefined);
-    setLastFormValues(undefined);
-    setLoading(true);
-    setTimeout(() => {
-      setOpportunities(MOCK_OPPORTUNITIES);
-      setLoading(false);
-    }, 1200);
+  };
+
+  const handleSelectPersona = (id: string) => {
+    startDemo(id);
+    setPage('opportunities');
+  };
+
+  const handleDismissDemo = () => {
+    stopDemo();
   };
 
   const activePlan = activePlanId
     ? opportunities.find((o) => o.id === activePlanId) ?? null
     : null;
 
-  const handleTogglePlanItem = (itemId: string, completed: boolean) => {
-    setOpportunities((prev) =>
-      prev.map((opp) => ({
-        ...opp,
-        planItems: opp.planItems.map((item) =>
-          item.id === itemId ? { ...item, isCompleted: completed } : item
-        ),
-      }))
-    );
-  };
+  const demoActive = status === 'demo' || (status === 'loading' && activePersonaId !== null);
 
-  /** Whether to show the form (no results and not loading) */
-  const showForm = page === 'opportunities' && opportunities.length === 0 && !loading && !demoActive;
+  // What to show on the opportunities page
+  const showLoading =
+    page === 'opportunities' &&
+    status === 'loading';
+
+  const showRestoring =
+    page === 'opportunities' &&
+    status === 'restoring';
+
+  const showResults =
+    page === 'opportunities' &&
+    (status === 'ready' || status === 'demo') &&
+    opportunities.length > 0;
 
   return (
     <>
       <AppShell
         currentPage={page}
-        onNavigate={(p) => {
-          setPage(p);
-          if (p === 'opportunities' && !demoActive) {
-            setOpportunities([]);
-            setApiError(null);
-            setFieldErrors(undefined);
-          }
-        }}
+        onNavigate={setPage}
         demoActive={demoActive}
         activePersonaId={activePersonaId}
         onSelectPersona={handleSelectPersona}
-        onDismissDemo={() => setDemoActive(false)}
+        onDismissDemo={handleDismissDemo}
       >
         <AnimatePresence mode="wait">
           {page === 'home' && (
@@ -141,7 +104,7 @@ function AppContent() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <Hero onGetStarted={handleGetStarted} onTryDemo={() => handleSelectPersona('maria')} />
+              <Hero onGetStarted={handleGetStarted} onTryDemo={handleTryDemo} />
             </motion.div>
           )}
 
@@ -154,25 +117,29 @@ function AppContent() {
               transition={{ duration: 0.2 }}
               className="space-y-8"
             >
-              {showForm ? (
-                <ProfileForm
-                  onSubmit={handleFormSubmit}
-                  loading={loading}
-                  error={apiError}
-                  fieldErrors={fieldErrors}
-                  initialValues={lastFormValues}
-                />
-              ) : loading ? (
+              {showRestoring ? (
                 <div className="space-y-6">
                   <div>
-                    <h1 className="text-2xl font-bold text-app">Finding Your Opportunities…</h1>
+                    <h1 className="text-2xl font-bold text-app">Restoring your session…</h1>
+                    <p className="text-sm text-muted mt-1">Checking for saved results.</p>
+                  </div>
+                  <SkeletonCards />
+                </div>
+              ) : showLoading ? (
+                <div className="space-y-6">
+                  <div>
+                    <h1 className="text-2xl font-bold text-app">
+                      {activePersonaId ? 'Loading demo…' : 'Finding Your Opportunities…'}
+                    </h1>
                     <p className="text-sm text-muted mt-1">
-                      Gemini is analysing your profile. This takes 10–20 seconds.
+                      {activePersonaId
+                        ? 'Preparing fictional demo data.'
+                        : 'Gemini is analysing your profile. This takes 10–20 seconds.'}
                     </p>
                   </div>
                   <SkeletonCards />
                 </div>
-              ) : opportunities.length > 0 ? (
+              ) : showResults ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
@@ -181,30 +148,34 @@ function AppContent() {
                         {demoActive && activePersonaId
                           ? `Demo results for ${MOCK_PERSONAS.find((p) => p.id === activePersonaId)?.name} · `
                           : ''}
-                        Feasibility scores computed by server-side TypeScript analysis
+                        Feasibility scores computed by server-side TypeScript
                       </p>
                     </div>
-                    <button
-                      onClick={handleGetStarted}
-                      className="text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-                    >
-                      ← Start over
-                    </button>
+                    {!demoActive && (
+                      <button
+                        onClick={() => startOver()}
+                        className="text-xs text-muted hover:text-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger rounded"
+                      >
+                        ← Start over
+                      </button>
+                    )}
                   </div>
                   <OpportunityGrid
                     opportunities={opportunities}
                     onViewPlan={(id) => setActivePlanId(id)}
                   />
                 </div>
-              ) : (
-                /* Error with no previous results — show form again with error preserved */
+              ) : (status === 'empty' || status === 'error') && !demoActive ? (
                 <ProfileForm
-                  onSubmit={handleFormSubmit}
-                  loading={loading}
+                  onSubmit={submitProfile}
+                  loading={false}
                   error={apiError}
                   fieldErrors={fieldErrors}
                   initialValues={lastFormValues}
                 />
+              ) : (
+                /* restoring or transitioning — show nothing */
+                <div />
               )}
             </motion.div>
           )}
@@ -217,10 +188,22 @@ function AppContent() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {opportunities.length > 0 ? (
+              {status === 'restoring' ? (
+                <div className="space-y-4">
+                  <div className="h-8 w-48 rounded-lg bg-surface-elevated-light dark:bg-surface-elevated-dark animate-pulse" />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[0,1,2,3].map(i => (
+                      <div key={i} className="h-20 rounded-xl bg-surface-elevated-light dark:bg-surface-elevated-dark animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+              ) : opportunities.length > 0 ? (
                 <DashboardPreview
                   opportunities={opportunities}
+                  selectedOpportunityId={selectedOpportunityId}
                   onViewPlan={(id) => setActivePlanId(id)}
+                  onSelectOpp={selectOpp}
+                  onStartOver={startOver}
                 />
               ) : (
                 <div className="text-center py-20 space-y-3">
@@ -244,7 +227,7 @@ function AppContent() {
             key={activePlan.id}
             opportunity={activePlan}
             onClose={() => setActivePlanId(null)}
-            onToggleItem={handleTogglePlanItem}
+            onToggleItem={togglePlanItem}
           />
         )}
       </AnimatePresence>

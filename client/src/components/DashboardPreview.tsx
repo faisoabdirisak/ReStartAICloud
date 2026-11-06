@@ -1,56 +1,99 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, TrendingUp, Users, BarChart3 } from 'lucide-react';
+import { CheckCircle2, TrendingUp, BarChart3, Target, AlertTriangle } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
 import { FeasibilityRing } from './FeasibilityRing';
 import { CategoryBadge } from './CategoryBadge';
 
 interface DashboardPreviewProps {
   opportunities: Opportunity[];
+  selectedOpportunityId: string | null;
   onViewPlan: (id: string) => void;
+  onSelectOpp: (id: string | null) => void;
+  onStartOver: () => void;
 }
 
-const STATS = [
-  { label: 'Opportunities', value: '3', icon: TrendingUp, color: 'text-primary' },
-  { label: 'Steps Complete', value: '9/36', icon: CheckCircle2, color: 'text-success' },
-  { label: 'Avg. Score', value: '80', icon: BarChart3, color: 'text-warning' },
-  { label: 'Days Active', value: '1', icon: Users, color: 'text-primary' },
-];
-
-export function DashboardPreview({ opportunities, onViewPlan }: DashboardPreviewProps) {
+export function DashboardPreview({
+  opportunities,
+  selectedOpportunityId,
+  onViewPlan,
+  onSelectOpp,
+  onStartOver,
+}: DashboardPreviewProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'progress'>('overview');
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const totalItems = opportunities.reduce((s, o) => s + o.planItems.length, 0);
   const completedItems = opportunities.reduce(
     (s, o) => s + o.planItems.filter((p) => p.isCompleted).length,
     0
   );
-  const overallPct = Math.round((completedItems / totalItems) * 100);
+  const overallPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const avgScore =
+    opportunities.length > 0
+      ? Math.round(opportunities.reduce((s, o) => s + o.feasibilityScore, 0) / opportunities.length)
+      : 0;
+
+  const STATS = [
+    { label: 'Opportunities', value: String(opportunities.length), icon: TrendingUp, color: 'text-primary' },
+    { label: 'Steps Complete', value: `${completedItems}/${totalItems}`, icon: CheckCircle2, color: 'text-success' },
+    { label: 'Avg. Score', value: String(avgScore), icon: BarChart3, color: 'text-warning' },
+    { label: 'Overall', value: `${overallPct}%`, icon: Target, color: 'text-primary' },
+  ];
 
   return (
     <section aria-labelledby="dashboard-heading" className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 id="dashboard-heading" className="text-2xl font-bold text-app">Your Progress</h2>
           <p className="text-sm text-muted">Track your 30-day action plans</p>
         </div>
-        {/* Tab switcher */}
-        <div className="flex rounded-lg border border-border-light dark:border-border-dark overflow-hidden" role="tablist">
-          {(['overview', 'progress'] as const).map((tab) => (
+        <div className="flex items-center gap-2">
+          {/* Tab switcher */}
+          <div className="flex rounded-lg border border-border-light dark:border-border-dark overflow-hidden" role="tablist">
+            {(['overview', 'progress'] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                  activeTab === tab
+                    ? 'bg-primary text-white'
+                    : 'text-muted hover:text-app hover:bg-surface-elevated-light dark:hover:bg-surface-elevated-dark'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          {/* Start over */}
+          {!confirmClear ? (
             <button
-              key={tab}
-              role="tab"
-              aria-selected={activeTab === tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
-                activeTab === tab
-                  ? 'bg-primary text-white'
-                  : 'text-muted hover:text-app hover:bg-surface-elevated-light dark:hover:bg-surface-elevated-dark'
-              }`}
+              onClick={() => setConfirmClear(true)}
+              className="text-xs text-muted hover:text-danger transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger rounded px-2 py-1.5"
+              aria-label="Start over — clear session"
             >
-              {tab}
+              Start over
             </button>
-          ))}
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs">
+              <AlertTriangle size={12} className="text-danger" />
+              <span className="text-danger font-medium">Clear session?</span>
+              <button
+                onClick={() => { setConfirmClear(false); onStartOver(); }}
+                className="px-2 py-0.5 rounded bg-danger text-white hover:bg-danger/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              >
+                Yes
+              </button>
+              <button
+                onClick={() => setConfirmClear(false)}
+                className="px-2 py-0.5 rounded border border-border-light dark:border-border-dark text-muted hover:text-app transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -86,11 +129,18 @@ export function DashboardPreview({ opportunities, onViewPlan }: DashboardPreview
           >
             {opportunities.map((opp) => {
               const done = opp.planItems.filter((p) => p.isCompleted).length;
-              const pct = Math.round((done / opp.planItems.length) * 100);
+              const pct = opp.planItems.length > 0
+                ? Math.round((done / opp.planItems.length) * 100)
+                : 0;
+              const isSelected = selectedOpportunityId === opp.id;
               return (
                 <div
                   key={opp.id}
-                  className="rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-4 space-y-3"
+                  className={`rounded-xl border bg-surface-light dark:bg-surface-dark p-4 space-y-3 transition-colors ${
+                    isSelected
+                      ? 'border-primary/50 ring-1 ring-primary/30'
+                      : 'border-border-light dark:border-border-dark'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <CategoryBadge category={opp.category} />
@@ -109,12 +159,25 @@ export function DashboardPreview({ opportunities, onViewPlan }: DashboardPreview
                       />
                     </div>
                   </div>
-                  <button
-                    onClick={() => onViewPlan(opp.id)}
-                    className="w-full text-xs text-primary hover:underline text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-                  >
-                    Continue plan →
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onViewPlan(opp.id)}
+                      className="flex-1 text-xs text-primary hover:underline text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                    >
+                      View plan →
+                    </button>
+                    <button
+                      onClick={() => onSelectOpp(isSelected ? null : opp.id)}
+                      className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                        isSelected
+                          ? 'bg-primary text-white border-primary'
+                          : 'border-border-light dark:border-border-dark text-muted hover:border-primary/40 hover:text-primary'
+                      }`}
+                      aria-pressed={isSelected}
+                    >
+                      {isSelected ? 'Focused' : 'Focus'}
+                    </button>
+                  </div>
                 </div>
               );
             })}

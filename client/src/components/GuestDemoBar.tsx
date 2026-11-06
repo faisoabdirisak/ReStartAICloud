@@ -40,11 +40,11 @@ export function GuestDemoBar({ activePersonaId, onSelectPersona, onDismiss }: Gu
           ))}
         </div>
         <button
-          onClick={onDismiss}
+          onClick={() => { onDismiss(); }}
           className="ml-auto text-muted hover:text-app transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-          aria-label="Dismiss demo bar"
+          aria-label="Exit demo mode"
         >
-          Dismiss
+          Exit demo
         </button>
       </div>
     </div>

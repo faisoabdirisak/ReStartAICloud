@@ -1,6 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 
+vi.mock('./lib/db.js', () => ({
+  prisma: {
+    session: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    planItem: { findUnique: vi.fn() },
+    progressEntry: { upsert: vi.fn() },
+  },
+}));
+
 // Mock Gemini so importing the app doesn't throw when GEMINI_API_KEY is absent
 vi.mock('./lib/gemini.js', () => ({
   generateContent: vi.fn(),

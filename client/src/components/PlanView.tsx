@@ -7,7 +7,7 @@ import { CategoryBadge } from './CategoryBadge';
 interface PlanViewProps {
   opportunity: Opportunity;
   onClose: () => void;
-  onToggleItem: (itemId: string, completed: boolean) => void;
+  onToggleItem: (itemId: string, completed: boolean) => void | Promise<void>;
 }
 
 export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) {

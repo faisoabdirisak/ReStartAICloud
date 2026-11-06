@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 
-// ── Mock Gemini BEFORE importing the app (which imports the route, which imports gemini) ──
+// ── Mock Gemini and Prisma BEFORE importing the app ───────────────────────────
 vi.mock('../lib/gemini.js', () => ({
   generateContent: vi.fn(),
   GeminiError: class GeminiError extends Error {
@@ -14,6 +14,38 @@ vi.mock('../lib/gemini.js', () => ({
   },
   GEMINI_MODEL: 'gemini-3.5-flash-lite',
 }));
+
+vi.mock('../lib/db.js', () => {
+  const mockPlanItem = (id: string, oppId: string, day: number, week: number, title: string) => ({
+    id, opportunityId: oppId, day, week, title, description: null, resourceUrl: null,
+    progressEntry: null,
+  });
+  const makeMockSession = () => ({
+    id: 'mock-session-id',
+    cookieToken: 'mock-cookie-token',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    selectedOpportunityId: null,
+    opportunities: [
+      { id: 'opp-1', sessionId: 'mock-session-id', title: 'UX Researcher', category: 'career-pivot',
+        summary: 'S', reasoning: 'R', feasibilityScore: 78, rank: 1,
+        planItems: Array.from({length: 12}, (_,i) => mockPlanItem(`item-${i}`, 'opp-1', (i+1)*2, Math.ceil((i+1)/3), `Step ${i+1}`)) },
+      { id: 'opp-2', sessionId: 'mock-session-id', title: 'E-commerce', category: 'micro-business',
+        summary: 'S', reasoning: 'R', feasibilityScore: 85, rank: 2,
+        planItems: Array.from({length: 12}, (_,i) => mockPlanItem(`item2-${i}`, 'opp-2', (i+1)*2, Math.ceil((i+1)/3), `Step ${i+1}`)) },
+      { id: 'opp-3', sessionId: 'mock-session-id', title: 'Data Analytics', category: 'upskilling',
+        summary: 'S', reasoning: 'R', feasibilityScore: 70, rank: 3,
+        planItems: Array.from({length: 12}, (_,i) => mockPlanItem(`item3-${i}`, 'opp-3', (i+1)*2, Math.ceil((i+1)/3), `Step ${i+1}`)) },
+    ],
+  });
+  return {
+    prisma: {
+      session: {
+        create: vi.fn().mockResolvedValue(makeMockSession()),
+      },
+    },
+  };
+});
 
 import { generateContent } from '../lib/gemini.js';
 import app from '../index.js';

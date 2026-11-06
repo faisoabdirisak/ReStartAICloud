@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { randomUUID } from 'crypto';
+import { Prisma } from '@prisma/client';
 import {
   AnalyzeRequestSchema,
   RawAIResponseSchema,
@@ -10,6 +10,12 @@ import {
 import { generateContent, GeminiError } from '../lib/gemini.js';
 import { computeFeasibilityScore, assignRanks } from '../lib/scoring.js';
 import { buildAnalyzePrompt } from '../prompts/analyze.js';
+import { prisma } from '../lib/db.js';
+import { setSessionCookie } from '../lib/session.js';
+
+type SessionWithRelations = Prisma.SessionGetPayload<{
+  include: { opportunities: { include: { planItems: { include: { progressEntry: true } } } } };
+}>;
 
 export const analyzeRouter = Router();
 
@@ -60,49 +66,77 @@ analyzeRouter.post('/', async (req, res) => {
   const rawOpportunities = parsed2.data.opportunities;
 
   // 4. Compute feasibility scores in TypeScript (never from AI)
-  const scores = rawOpportunities.map((o) =>
-    computeFeasibilityScore(o.signals)
-  );
+  const scores = rawOpportunities.map((o) => computeFeasibilityScore(o.signals));
   const ranks = assignRanks(scores);
 
-  // 5. Build typed Opportunity objects with server-generated IDs
-  const now = new Date();
-  const sessionId = randomUUID();
+  // 5. Persist to database
+  let dbSession: SessionWithRelations;
+  try {
+    dbSession = await prisma.session.create({
+      data: {
+        opportunities: {
+          create: rawOpportunities.map((raw, i) => ({
+            title: raw.title,
+            category: raw.category,
+            summary: raw.summary,
+            reasoning: raw.reasoning,
+            feasibilityScore: scores[i],
+            rank: ranks[i],
+            planItems: {
+              create: raw.planItems.map((item) => ({
+                day: item.day,
+                week: item.week,
+                title: item.title,
+                description: item.description ?? null,
+                resourceUrl: item.resourceUrl ?? null,
+              })),
+            },
+          })),
+        },
+      },
+      include: {
+        opportunities: {
+          include: { planItems: { include: { progressEntry: true } } },
+        },
+      },
+    });
+  } catch {
+    res.status(500).json({ error: 'Failed to save your results. Please try again.' });
+    return;
+  }
 
-  const opportunities: Opportunity[] = rawOpportunities.map((raw, i) => {
-    const oppId = randomUUID();
-    const planItems: PlanItem[] = raw.planItems.map((item) => ({
-      id: randomUUID(),
-      day: item.day,
-      week: item.week,
-      title: item.title,
-      description: item.description,
-      resourceUrl: item.resourceUrl,
-      isCompleted: false,
-    }));
+  // 6. Build typed response — cookieToken is NEVER sent to the client
+  const opportunities: Opportunity[] = dbSession.opportunities
+    .map((opp) => ({
+      id: opp.id,
+      title: opp.title,
+      category: opp.category as Opportunity['category'],
+      summary: opp.summary,
+      reasoning: opp.reasoning,
+      feasibilityScore: opp.feasibilityScore,
+      rank: opp.rank,
+      planItems: opp.planItems.map((item): PlanItem => ({
+        id: item.id,
+        day: item.day,
+        week: item.week,
+        title: item.title,
+        description: item.description ?? undefined,
+        resourceUrl: item.resourceUrl ?? undefined,
+        isCompleted: item.progressEntry?.isCompleted ?? false,
+      })),
+    }))
+    .sort((a, b) => a.rank - b.rank);
 
-    return {
-      id: oppId,
-      title: raw.title,
-      category: raw.category,
-      summary: raw.summary,
-      reasoning: raw.reasoning,
-      feasibilityScore: scores[i],
-      rank: ranks[i],
-      planItems,
-    };
-  });
-
-  // Sort by rank ascending for the response
-  opportunities.sort((a, b) => a.rank - b.rank);
-
-  // 6. Return session (DB persistence comes in ST-4)
   const session: Session = {
-    id: sessionId,
-    createdAt: now,
-    updatedAt: now,
+    id: dbSession.id,
+    createdAt: dbSession.createdAt,
+    updatedAt: dbSession.updatedAt,
+    selectedOpportunityId: null,
     opportunities,
   };
+
+  // 7. Set HttpOnly cookie with the opaque token (guest isolation)
+  setSessionCookie(res, dbSession.cookieToken);
 
   res.status(200).json(session);
 });

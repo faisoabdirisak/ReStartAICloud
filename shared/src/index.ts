@@ -39,6 +39,8 @@ export const SessionSchema = z.object({
   id: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  /** cookieToken is NEVER included in API responses — server-side only */
+  selectedOpportunityId: z.string().nullable().optional(),
   opportunities: z.array(OpportunitySchema),
 });
 export type Session = z.infer<typeof SessionSchema>;
@@ -101,6 +103,14 @@ export const ProgressUpdateSchema = z.object({
   isCompleted: z.boolean(),
 });
 export type ProgressUpdate = z.infer<typeof ProgressUpdateSchema>;
+
+// ---------------------------------------------------------------------------
+// Select Opportunity (client → server)
+// ---------------------------------------------------------------------------
+export const SelectOpportunitySchema = z.object({
+  opportunityId: z.string().nullable(),
+});
+export type SelectOpportunity = z.infer<typeof SelectOpportunitySchema>;
 
 // ---------------------------------------------------------------------------
 // Feasibility score tiers (shared utility — deterministic, not AI)

@@ -11,10 +11,15 @@ datasource db {
 }
 
 model Session {
-  id            String        @id @default(cuid())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  opportunities Opportunity[]
+  id                    String        @id @default(cuid())
+  /// Opaque random token stored in an HttpOnly cookie — used for guest isolation.
+  /// Never returned in API responses.
+  cookieToken           String        @unique @default(cuid())
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  /// The opportunity the user has selected to focus on (null = none selected)
+  selectedOpportunityId String?
+  opportunities         Opportunity[]
 }
 
 model Opportunity {
@@ -32,9 +37,9 @@ model Opportunity {
 }
 
 model PlanItem {
-  id             String      @id @default(cuid())
+  id             String         @id @default(cuid())
   opportunityId  String
-  opportunity    Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  opportunity    Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   day            Int
   week           Int
   title          String
@@ -44,10 +49,10 @@ model PlanItem {
 }
 
 model ProgressEntry {
-  id          String   @id @default(cuid())
-  planItemId  String   @unique
-  planItem    PlanItem @relation(fields: [planItemId], references: [id], onDelete: Cascade)
-  isCompleted Boolean  @default(false)
+  id          String    @id @default(cuid())
+  planItemId  String    @unique
+  planItem    PlanItem  @relation(fields: [planItemId], references: [id], onDelete: Cascade)
+  isCompleted Boolean   @default(false)
   completedAt DateTime?
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
 }

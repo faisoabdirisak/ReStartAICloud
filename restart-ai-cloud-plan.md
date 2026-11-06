@@ -144,11 +144,11 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 - `gemini-test/` contains the verified API call pattern — inspect before writing `gemini.ts`
 - Gemini model: `gemini-2.0-flash-lite` (or the exact model ID confirmed in `gemini-test/`)
 
-**Status:** [ ] pending
+**Status:** [x] done
 
 ---
 
-### ST-3 — Opportunity Cards & 30-Day Plans UI [ ] pending
+### ST-3 — Opportunity Cards & 30-Day Plans UI [x] done
 
 **Intent:** Deliver the primary value screen — three ranked opportunity cards with feasibility scores and expandable 30-day action plans.
 
@@ -177,7 +177,7 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 - Motion: cards fade-up with 0.1s stagger delay per card
 - All API calls go through a `client/src/lib/api.ts` fetch wrapper
 
-**Status:** [ ] pending
+**Status:** [x] done
 
 ---
 
