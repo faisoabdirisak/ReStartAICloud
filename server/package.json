@@ -13,7 +13,9 @@
     "db:push": "prisma db push --schema=../prisma/schema.prisma",
     "db:generate": "prisma generate --schema=../prisma/schema.prisma",
     "db:seed": "tsx --env-file=.env ../prisma/seed.ts",
-    "db:studio": "dotenv -e .env -- prisma studio --schema=../../prisma/schema.prisma"
+    "db:studio": "prisma studio --schema=../prisma/schema.prisma",
+    "test:coverage": "vitest run --coverage",
+    "start": "tsx src/server.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",

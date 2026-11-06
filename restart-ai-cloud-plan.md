@@ -12,7 +12,7 @@ A displaced worker arrives, describes their situation, and the app returns:
 **Approach:** Greenfield monorepo. React/Vite/TS frontend + Express/TS backend in a single repo.
 No authentication in the MVP. A "Guest Demo" mode loads fictional personas so judges can explore without entering real data. The `gemini-test/` directory is preserved and never modified.
 
-**Non-goals:** Auth/accounts, payments, multi-user persistence, mobile-native app.
+**Non-goals:** Auth/accounts, payments, account-based cross-device access, mobile-native app. Browser-specific guest persistence is implemented.
 
 ---
 
@@ -25,14 +25,15 @@ restart-ai-cloud/
 ├── shared/          # Zod schemas + TypeScript types shared by both sides
 ├── .github/         # CI/CD workflows + CodeQL
 ├── prisma/          # schema.prisma + migrations
-├── gemini-test/     # PRESERVED — not touched
 └── docs/            # Architecture, API reference, contributing guide
 ```
 
 **Data flow:**
 1. Client form → POST `/api/analyze` → Zod validation → Gemini API call → structured JSON → Prisma save → response
-2. Client polls GET `/api/sessions/:id` → renders cards + plan
-3. Progress updates → PATCH `/api/sessions/:id/progress`
+2. Client restores GET `/api/sessions/me` using an HttpOnly cookie → renders cards + plan
+3. Progress updates → PATCH `/api/sessions/me/progress`
+
+The separate `gemini-test/` folder is outside this application repository. Raw profile form fields are sent to Gemini but not saved in SQLite; generated results and task progress are saved.
 
 ---
 
@@ -181,7 +182,7 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 ---
 
-### ST-4 — Progress Dashboard & Guest Demo [-] in progress
+### ST-4 — Progress Dashboard & Guest Demo [x] done
 
 > **Numbering note:** Our implementation work referred to session persistence as "ST-3", but in
 > this plan ST-3 is *Opportunity Cards & 30-Day Plans UI* (already done) and ST-4 is this stage.
@@ -198,8 +199,8 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 - [x] `OnboardingModal` appears on first visit (localStorage flag), explains the app in 3 slides with motion transitions
 - [x] Dark/light theme toggle persists to `localStorage` — confirmed in `ThemeContext.tsx`
 - [x] All demo data is clearly labelled fictional (disclaimer in UI) — "Demo mode — fictional data only" banner
-- [x] Each demo persona has pre-seeded data available — `prisma/seed.ts` created with Maria/James/Aisha; note: guest demo currently uses in-memory mock data (`mockData.ts`) while `seed.ts` seeds the DB for the server-backed path
-- [x] Each demo persona served from a DB-seeded `Session` via the cookie/session route — `seed.ts` exists but `GuestDemoBar` loads `MOCK_OPPORTUNITIES` from client state, not via the server session routes; needs wiring
+- [x] Each demo persona has pre-seeded data available — `prisma/seed.ts` created with Maria/James/Aisha; the client loads seeded fictional data through the demo API, with bundled mock data as an offline fallback
+- [x] Each demo persona served from a DB-seeded `Session` via `POST /api/sessions/demo`; this read-only route never replaces the live cookie, and demo progress stays in client memory
 
 > **Session route note:** the plan specifies `GET /api/sessions/:id`; the implementation uses
 > `GET /api/sessions/me` (cookie-identified, no ID in URL). This is intentional — there is no
@@ -227,42 +228,46 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 ---
 
-### ST-5 — Quality, Security & CI/CD [-] in progress
+### ST-5 — Quality, Security & CI/CD [x] implemented and locally verified
 
-**Intent:** Ensure the project meets IBM AI Challenge standards for code quality, security, testing coverage, and automated deployment.
+**Intent:** Complete code-quality checks, measured server coverage, a documented route review, deployment preparation, and project documentation.
 
 **Expected Outcomes:**
-- [x] GitHub Actions CI workflow runs on every PR: lint, typecheck, Vitest, build — `.github/workflows/ci.yml` created
-- [x] CodeQL analysis workflow runs on push to `master` — `.github/workflows/codeql.yml` created
-- [x] Helmet middleware present on all API responses — `app.use(helmet())` in `server/src/index.ts`
-- [x] `GEMINI_API_KEY` only used server-side; `.env` excluded from git via `.gitignore`
-- [x] Single-process deployment configured — Express serves `client/dist` as static files when `NODE_ENV=production` (`server/src/index.ts`)
-- [x] Integration test for `POST /api/analyze` — 9 supertest tests in `analyze.test.ts` using mocked Gemini; already committed in `d2409e9`
-- [x] Route security assertions — `sessions.test.ts` covers cookie isolation, ownership enforcement, and token non-disclosure; `analyze.test.ts` covers secret-leak prevention; all committed
-- [ ] All Vitest suites pass with ≥80% coverage on `server/src/` — coverage config not yet added; CI runs tests but does not enforce threshold
-- [ ] `docs/ARCHITECTURE.md` — not yet created
-- [ ] `docs/API.md` — not yet created
-- [ ] `docs/CONTRIBUTING.md` — not yet created
-- [ ] `README.md` — not yet created (a write was interrupted mid-session; file confirmed absent)
+- [x] GitHub CI runs lint, typechecks, tests, build, and server coverage on pushes/PRs to main/master using Node 22.
+- [x] CodeQL scans JavaScript/TypeScript on main/master pushes/PRs and its weekly schedule. The previous workflow run was user-confirmed green; the new CI coverage gate still needs a post-push run.
+- [x] Coverage includes all server source modules except tests, with 80% aggregate thresholds for statements, branches, functions, and lines.
+- [x] Existing mocked analysis tests and new SDK, async error, cross-origin, demo-token, and persistence regression tests.
+- [x] Route-by-route review recorded in `docs/SECURITY.md`, including remaining operational limitations.
+- [x] Safe JSON errors, limited request bodies, guest ownership, cross-origin mutation checks, API no-store headers, and HTTP/HTTPS-only generated resource links.
+- [x] Single-process production start command and built frontend serving verified locally. No cloud deployment is claimed.
+- [x] `README.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/CONTRIBUTING.md`, and `docs/DEPLOYMENT.md` added.
 
 **Todo List:**
-1. [x] Create `.github/workflows/ci.yml` — lint, typecheck, test, build jobs
-2. [x] Create `.github/workflows/codeql.yml` — CodeQL analysis for JS/TS
-3. [x] Add `helmet` middleware to Express app
-4. [x] Audit all routes: no secrets in responses, no raw errors leaked — enforced by tests (`cookieToken` non-disclosure, `GEMINI_API_KEY` non-leak, 401/403 ownership checks) and middleware (Helmet, Zod, rate-limit); no separate written audit doc produced
-5. [ ] Add Vitest coverage config; enforce 80% threshold in CI
-6. [x] Write integration test for `POST /api/analyze` using a mocked Gemini response — `analyze.test.ts` has 10 supertest tests under `POST /api/analyze` + 1 `GET /health` = 11 total; all mock `vi.mock('../lib/gemini.js')` so no real API key is needed in CI (committed in `f27e94c`, expanded in `d2409e9`)
-7. [ ] Write `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/CONTRIBUTING.md`
-8. [ ] Write `README.md` with overview, feature list, Guest Demo instructions, tech stack badge table
-9. [x] Configure deployment: Express serves `client/dist` as static files from `server/src/index.ts` when `NODE_ENV=production`
+1. [x] Maintain `.github/workflows/ci.yml` — lint, typecheck, tests, 80% server coverage gate, build.
+2. [x] Maintain `.github/workflows/codeql.yml` — JS/TS scanning; security alerts remain a separate review from successful execution.
+3. [x] Helmet middleware on responses; API origin controls and rate limits reviewed.
+4. [x] Audit every route for secret exposure, guest ownership, and safe errors; fixes and regression evidence documented in `docs/SECURITY.md`.
+5. [x] Add V8 coverage configuration/provider matching Vitest 5.1.0; enforce 80% across all four aggregate metrics in CI.
+6. [x] Keep mocked POST `/api/analyze` tests, and add a real disposable SQLite integration check for restore, selection, progress, guest isolation, and deletion. No live Gemini requests in tests.
+7. [x] Write architecture, API, contributor, security-review, and deployment documents.
+8. [x] Write README with setup, fictional guest demo, working features, checks, and honest limitations.
+9. [x] Configure production serving/startup and verify health, homepage, SPA fallback, and API JSON 404 on a temporary local process.
 
-**Relevant Context:**
-- `Helmet` defaults are sufficient; no custom CSP needed for MVP
-- Single-process deployment: Express serves `client/dist` as static files from `server/src/index.ts`
-- CodeQL default query suite for JavaScript is sufficient
-- Test suite (committed in `d2409e9`): analyze.test.ts 11 · sessions.test.ts 14 · scoring.test.ts 6 · index.test.ts 1 = **32 server** · shared 10 · client 9 (AppShell 4 + components 5) = **51 total**
+**Verification record — 6 November 2026:**
+- 111 tests passed: 21 shared, 65 server, 25 client.
+- Server coverage: statements 95.12%, branches 92.92%, functions 97.36%, lines 95.33%; the 80% gate passes. See `server/coverage/index.html` locally.
+- Lint, all workspace typechecks, and production build passed.
+- Local production smoke test passed without provider calls or querying the user's database.
+- Production dependencies audited with `npm audit`; no findings at the time of verification.
+- Browser navigation/progress/demo behavior was manually verified by the user before this stage. After the security changes, repeat the manual acceptance steps in CONTRIBUTING.md.
+- Local verification does not replace the new GitHub run after these files are pushed.
 
-**Status:** [-] in progress — CI/CD workflows, Helmet, static serving, integration tests, and route audit assertions done; coverage enforcement threshold, docs folder, and README remain
+**Limitations and follow-up (not claimed complete):**
+- No public hosting deployment, accounts, cross-device access, retention cleanup, or production backup/migration operations.
+- Raw profile fields, standalone estimated cost/risk fields, and AI scoring inputs are not persisted in the current DB schema.
+- AI reasoning and fit signals remain unverified estimates; a fit score is not a probability of success.
+- Deployment-specific proxy trust, shared rate limiting, provider spend controls/timeouts, and real user evaluation remain follow-up work.
+
+**Status:** [x] ST-5 implementation complete locally; review, commit, push, rerun GitHub Actions, and repeat the browser acceptance checks before release.
 
 ---
-

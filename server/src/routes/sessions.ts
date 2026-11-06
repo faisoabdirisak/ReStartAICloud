@@ -5,6 +5,7 @@
  * A guest can only access sessions tied to their own cookie.
  */
 import { Router } from 'express';
+import { asyncHandler } from '../lib/asyncHandler.js';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import {
@@ -80,24 +81,24 @@ function buildSessionResponse(dbSession: SessionWithRelations | null): Session |
 }
 
 // ── GET /api/sessions/me — restore session from cookie ──────────────────────
-sessionsRouter.get('/me', async (req, res) => {
+sessionsRouter.get('/me', asyncHandler(async (req, res) => {
   const token = getSessionToken(req);
   if (!token) {
     res.status(204).end(); // no session — client should show empty state
     return;
   }
 
-  const dbSession = await loadOwnSession(token).catch(() => null);
+  const dbSession = await loadOwnSession(token);
   if (!dbSession) {
     res.status(204).end();
     return;
   }
 
   res.json(buildSessionResponse(dbSession));
-});
+}));
 
 // ── PATCH /api/sessions/me/progress — toggle a plan item ────────────────────
-sessionsRouter.patch('/me/progress', async (req, res) => {
+sessionsRouter.patch('/me/progress', asyncHandler(async (req, res) => {
   const token = getSessionToken(req);
   if (!token) {
     res.status(401).json({ error: 'No session cookie.' });
@@ -143,10 +144,10 @@ sessionsRouter.patch('/me/progress', async (req, res) => {
   });
 
   res.status(204).end();
-});
+}));
 
 // ── PATCH /api/sessions/me/select — set selected opportunity ────────────────
-sessionsRouter.patch('/me/select', async (req, res) => {
+sessionsRouter.patch('/me/select', asyncHandler(async (req, res) => {
   const token = getSessionToken(req);
   if (!token) {
     res.status(401).json({ error: 'No session cookie.' });
@@ -182,12 +183,12 @@ sessionsRouter.patch('/me/select', async (req, res) => {
   }
 
   res.status(204).end();
-});
+}));
 
 // ── POST /api/sessions/demo — load a seeded demo persona (read-only, no cookie) ──
 // Returns the fictional session data without touching the caller's live cookie.
 // The client holds this in React state only — nothing is persisted or overwritten.
-sessionsRouter.post('/demo', async (req, res) => {
+sessionsRouter.post('/demo', asyncHandler(async (req, res) => {
   const parsed = DemoRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid persona. Must be maria, james, or aisha.' });
@@ -202,7 +203,7 @@ sessionsRouter.post('/demo', async (req, res) => {
         include: { planItems: { include: { progressEntry: true } } },
       },
     },
-  }).catch(() => null);
+  });
 
   if (!dbSession) {
     res.status(404).json({ error: 'Demo data not found. Run npm run db:seed in server/ first.' });
@@ -211,10 +212,10 @@ sessionsRouter.post('/demo', async (req, res) => {
 
   // Deliberately do NOT set or modify any cookie — live session is untouched
   res.json(buildSessionResponse(dbSession));
-});
+}));
 
 // ── DELETE /api/sessions/me — clear session (start over) ────────────────────
-sessionsRouter.delete('/me', async (req, res) => {
+sessionsRouter.delete('/me', asyncHandler(async (req, res) => {
   const token = getSessionToken(req);
   if (!token) {
     res.status(204).end(); // nothing to clear
@@ -229,4 +230,4 @@ sessionsRouter.delete('/me', async (req, res) => {
 
   clearSessionCookie(res);
   res.status(204).end();
-});
+}));

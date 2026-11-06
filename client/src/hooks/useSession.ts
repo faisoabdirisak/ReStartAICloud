@@ -81,7 +81,10 @@ export function useSession(): UseSessionReturn {
         }
       })
       .catch(() => {
-        if (!cancelled) setStatus('empty'); // network error on restore → start fresh
+        if (!cancelled) {
+          setApiError('Could not restore your saved session. Please refresh to retry.');
+          setStatus('error');
+        }
       });
     return () => { cancelled = true; };
   }, []);
@@ -202,7 +205,8 @@ export function useSession(): UseSessionReturn {
     try {
       await clearSession();
     } catch {
-      // best-effort — even if server call fails, reset local state
+      setApiError('Could not clear your saved session. Please try again.');
+      return; // Preserve the session until the server confirms deletion.
     }
     liveSessionRef.current = null;
     setSessionId(null);

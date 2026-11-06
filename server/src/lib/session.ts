@@ -37,5 +37,7 @@ export function clearSessionCookie(res: Response): void {
  */
 export function getSessionToken(req: Request): string | null {
   const val = req.cookies?.[SESSION_COOKIE];
-  return typeof val === 'string' && val.length > 0 ? val : null;
+  // Public fictional seed tokens must never authorize live reads or writes.
+  return typeof val === 'string' && val.length > 0 && val.length <= 256
+    && !val.startsWith('demo-token-') ? val : null;
 }

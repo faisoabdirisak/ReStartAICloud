@@ -176,3 +176,12 @@ describe('computeStreak', () => {
     expect(computeStreak(items, NOW)).toBe(1);
   });
 });
+
+// Resource URLs originate from AI output and must not execute browser scripts.
+describe('resource link safety', () => {
+  it('rejects a javascript URL in a model-generated plan', async () => {
+    const { RawPlanItemSchema } = await import('./index');
+    expect(RawPlanItemSchema.safeParse({ day: 1, week: 1, title: 'Learn', resourceUrl: 'javascript:alert(1)' }).success).toBe(false);
+    expect(RawPlanItemSchema.safeParse({ day: 1, week: 1, title: 'Learn', resourceUrl: 'https://example.com/course' }).success).toBe(true);
+  });
+});

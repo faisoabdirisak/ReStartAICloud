@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// AI-generated links are untrusted. Allow web resources only.
+const ResourceUrlSchema = z.string().url().refine(
+  (value) => ['http:', 'https:'].includes(new URL(value).protocol),
+  'Resource links must use HTTP or HTTPS',
+);
+
 // ---------------------------------------------------------------------------
 // Plan Item
 // ---------------------------------------------------------------------------
@@ -9,7 +15,7 @@ export const PlanItemSchema = z.object({
   week: z.number().int().min(1).max(4),
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
-  resourceUrl: z.string().url().optional(),
+  resourceUrl: ResourceUrlSchema.optional(),
   isCompleted: z.boolean().default(false),
   /** ISO timestamp set when isCompleted becomes true; null when unchecked */
   completedAt: z.coerce.date().nullable().optional(),
@@ -71,7 +77,7 @@ export const RawPlanItemSchema = z.object({
   week: z.number().int().min(1).max(4),
   title: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
-  resourceUrl: z.string().url().optional(),
+  resourceUrl: ResourceUrlSchema.optional(),
 });
 
 export const RawOpportunitySchema = z.object({

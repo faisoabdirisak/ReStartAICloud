@@ -40,6 +40,8 @@ jobs:
         working-directory: server
         run: npx prisma db push --schema=../prisma/schema.prisma --skip-generate
       - run: npm test
+      - name: Server coverage (80% minimum)
+        run: npm run test:coverage
 
   build:
     name: Build

@@ -10,7 +10,7 @@
  *   launch_speed    20%  – inverse of launch time (faster = higher)
  *   simplicity      10%  – inverse of complexity (simpler = higher)
  *
- * The AI never sees this formula and cannot influence the final score.
+ * TypeScript controls the formula; AI-supplied signals still influence the score.
  */
 export interface ScoringSignals {
   skillFitPct: number;       // 0–100
@@ -27,11 +27,11 @@ export function computeFeasibilityScore(signals: ScoringSignals): number {
   const skillFit = clamp(signals.skillFitPct, 0, 100);
   const affordability = clamp(signals.affordabilityPct, 0, 100);
 
-  // Normalise launch time: 7 days → 100, 365 days → 0
+  // Normalise launch time: 1 day → 100, 365 days → 0
   const launchDays = clamp(signals.launchTimeDays, 1, 365);
   const launchSpeed = Math.round(((365 - launchDays) / 364) * 100);
 
-  // Normalise complexity: score 1 → 100, score 10 → 10
+  // Normalise complexity: score 1 → 100, score 10 → 0
   const complexity = clamp(signals.complexityScore, 1, 10);
   const simplicity = Math.round((1 - (complexity - 1) / 9) * 100);
 
