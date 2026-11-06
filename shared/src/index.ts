@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OpportunityExplanationSchema, ScoringSignalsSchema } from './explanation.js';
 
 // AI-generated links are untrusted. Allow web resources only.
 const ResourceUrlSchema = z.string().url().refine(
@@ -36,6 +37,7 @@ export const OpportunitySchema = z.object({
   /** 0–100 integer computed by server-side TypeScript, not AI */
   feasibilityScore: z.number().int().min(0).max(100),
   rank: z.number().int().min(1).max(3),
+  explanation: OpportunityExplanationSchema.nullable().optional(),
   planItems: z.array(PlanItemSchema),
 });
 export type Opportunity = z.infer<typeof OpportunitySchema>;
@@ -87,13 +89,10 @@ export const RawOpportunitySchema = z.object({
   reasoning: z.string().max(2000),
   estimatedCostUSD: z.number().int().min(0).optional(),
   risks: z.string().max(500).optional(),
+  assumptions: z.array(z.string().min(1).max(300)).max(6).default([]),
+  questionsToVerify: z.array(z.string().min(1).max(300)).max(6).default([]),
   /** AI signals used only as inputs to server-side scoring */
-  signals: z.object({
-    skillFitPct: z.number().int().min(0).max(100),
-    affordabilityPct: z.number().int().min(0).max(100),
-    launchTimeDays: z.number().int().min(1).max(365),
-    complexityScore: z.number().int().min(1).max(10),
-  }),
+  signals: ScoringSignalsSchema,
   planItems: z.array(RawPlanItemSchema).length(12),
 });
 export type RawOpportunity = z.infer<typeof RawOpportunitySchema>;
@@ -194,3 +193,5 @@ export function computeStreak(
 }
 
 export { createDemoOpportunities, DEMO_PERSONA_IDS, type DemoPersonaId } from './demo.js';
+
+export { OpportunityExplanationSchema, ScoringSignalsSchema, calculateScoreBreakdown, type OpportunityExplanation, type ScoringSignals } from './explanation.js';

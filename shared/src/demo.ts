@@ -1,3 +1,4 @@
+import { calculateScoreBreakdown, type OpportunityExplanation } from './explanation.js';
 import type { Opportunity, PlanItem } from './index.js';
 
 export const DEMO_PERSONA_IDS = ['maria', 'james', 'aisha'] as const;
@@ -111,6 +112,26 @@ const DEMO_DATA = [
   },
  ] as const;
 
+
+/** Synthetic, explicitly fictional inputs; preserve each existing demo score. */
+function demoExplanation(score: number, title: string, cost: number): OpportunityExplanation {
+  const signals = {
+    skillFitPct: score, affordabilityPct: score,
+    launchTimeDays: Math.round(365 - score * 3.64), complexityScore: Math.max(1, Math.round(10 - score * .09)),
+  };
+  for (let skill = 0; skill <= 100; skill++) {
+    if (calculateScoreBreakdown({ ...signals, skillFitPct: skill }).total === score) {
+      signals.skillFitPct = skill; break;
+    }
+  }
+  return {
+    version: 1, source: 'fictional-demo', signals, estimatedCostUSD: cost,
+    risks: `Training time, entry requirements and local demand for ${title} need checking. This is a fictional example.`,
+    assumptions: [`The participant can set aside time to explore ${title}.`, 'The illustrated cost and fit inputs are synthetic, not researched quotes or assessments.'],
+    questionsToVerify: [`Which entry requirements apply to ${title} in my location?`, `What current fees and time commitment would ${title} require?`],
+  };
+}
+
 /** One source for seeded and offline fictional demos. Every call returns fresh data. */
 export function createDemoOpportunities(personaId: DemoPersonaId, now = new Date()): Opportunity[] {
   const persona = DEMO_DATA.find((entry) => entry.id === personaId)!;
@@ -158,6 +179,7 @@ export function createDemoOpportunities(personaId: DemoPersonaId, now = new Date
         id: entry.id, title: entry.title, category: entry.category,
         summary: entry.summary, reasoning: entry.reasoning, feasibilityScore: entry.feasibilityScore,
         rank: rank + 1, planItems,
+        explanation: demoExplanation(entry.feasibilityScore, target, 100 + rank * 150 + DEMO_PERSONA_IDS.indexOf(personaId) * 75),
       };
     });
 }

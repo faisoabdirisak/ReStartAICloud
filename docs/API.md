@@ -45,7 +45,19 @@ Session contains `id`, ISO `createdAt`/`updatedAt`, nullable `selectedOpportunit
 Each opportunity contains `id`, `title`, `category`, `summary`, `reasoning`, `feasibilityScore`, `rank`, and `planItems`.
 Each plan item contains `id`, `day`, `week`, `title`, optional `description`/`resourceUrl`, `isCompleted`, and nullable `completedAt`.
 New AI resource URLs are restricted to HTTP or HTTPS. Optional absent values may be omitted from JSON.
-The guest `cookieToken`, API key, original profile, raw scoring signals, and standalone estimatedCostUSD/risks fields are not in this response.
+The guest `cookieToken`, API key, and original profile are not in this response.
+New opportunities include nullable `explanation`:
+
+- `version: 1`, `source: "ai-estimate"` or `"fictional-demo"`.
+- `estimatedCostUSD`: nonnegative integer or null (unknown, distinct from 0).
+- `risks`: up to 500 characters or null.
+- `assumptions` and `questionsToVerify`: up to six strings each, at most 300 characters per string.
+- `signals`: skillFitPct and affordabilityPct (0-100), launchTimeDays (1-365), complexityScore (1-10).
+
+The server creates this envelope from validated model output and stores it as versioned JSON text in SQLite.
+The same version-1 formula supplies server scores and UI contributions. Assumptions and questions default to empty arrays if absent,
+not invented statements. Old, malformed, or unsupported saved explanations are returned as null without changing the saved score or plan.
+Demo signals are deliberately synthetic; only new live analyses have AI-estimated inputs.
 
 ## Errors and cookies
 

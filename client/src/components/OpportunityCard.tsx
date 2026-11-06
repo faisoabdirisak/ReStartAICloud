@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
 import { FeasibilityRing } from './FeasibilityRing';
+import { OpportunityExplanation } from './OpportunityExplanation';
 import { CategoryBadge } from './CategoryBadge';
 
 interface OpportunityCardProps {
@@ -52,6 +53,8 @@ export function OpportunityCard({ opportunity, index, onViewPlan }: OpportunityC
 
         {/* Summary */}
         <p className="text-sm text-muted leading-relaxed flex-1">{summary}</p>
+
+        <OpportunityExplanation opportunity={opportunity} />
 
         {/* Progress indicator */}
         {completedCount > 0 && (

@@ -15,6 +15,7 @@ async function main() {
         opportunities: { create: opportunities.map((opp) => ({
           id: opp.id, title: opp.title, category: opp.category, summary: opp.summary,
           reasoning: opp.reasoning, feasibilityScore: opp.feasibilityScore, rank: opp.rank,
+          explanationJson: JSON.stringify(opp.explanation),
           planItems: { create: opp.planItems.map((item) => ({
             id: item.id, day: item.day, week: item.week, title: item.title, description: item.description,
             progressEntry: item.isCompleted ? { create: { isCompleted: true, completedAt: item.completedAt } } : undefined,

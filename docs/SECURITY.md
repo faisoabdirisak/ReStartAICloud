@@ -34,7 +34,7 @@ Reviewed locally on 6 November 2026. This is a source review and automated regre
 - An IP rate limiter is not a global provider-spend cap. Proxy configuration and shared limiting need deployment-specific review.
 - Prompt injection and misleading suggestions remain possible; schema validation and fixed scoring weights do not prove factual accuracy.
 - Provider calls have no application-specific deadline/cancellation policy yet. Resource availability and cost/risk estimates are not independently verified.
-- Standalone cost/risk fields and scoring signals are not saved. Scores are not success probabilities.
+- New opportunities save bounded, validated cost/risk estimates, assumptions, questions and scoring signals in versioned explanation text. These can repeat profile details and are protected by the same guest access checks. Old rows remain without explanations. Scores are not success probabilities.
 - SQLite concurrency, backups, production HTTPS, migrations, hosting, and dependency monitoring require operational work.
 - No independent accessibility review, external penetration test, or deployed end-to-end assessment is claimed.
 

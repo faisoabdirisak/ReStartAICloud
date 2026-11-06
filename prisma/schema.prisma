@@ -33,6 +33,8 @@ model Opportunity {
   /// Computed server-side in TypeScript — never from AI output
   feasibilityScore Int
   rank             Int
+  /// Versioned validated explanation JSON; null for older saved results.
+  explanationJson  String?
   planItems        PlanItem[]
 }
 

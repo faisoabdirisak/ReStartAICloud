@@ -264,7 +264,7 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 **Limitations and follow-up (not claimed complete):**
 - No public hosting deployment, accounts, cross-device access, retention cleanup, or production backup/migration operations.
-- Raw profile fields, standalone estimated cost/risk fields, and AI scoring inputs are not persisted in the current DB schema.
+- Raw profile fields are not persisted. Cost/risk estimates and scoring inputs were added for new analyses in Improvement 1; older saved results remain unchanged.
 - AI reasoning and fit signals remain unverified estimates; a fit score is not a probability of success.
 - Deployment-specific proxy trust, shared rate limiting, provider spend controls/timeouts, and real user evaluation remain follow-up work.
 
@@ -279,3 +279,22 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 - Demo task completion and focus selection stay local, remain separate by persona within the tab, and never call live mutation routes.
 - Persona switching and exiting ignore stale in-flight responses; late live restoration cannot overwrite demo mode.
 - Added tests for all-week checkboxes, offline fallback, request ordering, live-session protection, and repeatable demo seeding against disposable SQLite.
+
+## Improvement 1 — Explain My Opportunity [x] implemented locally
+
+Implementation adds full-screen explanation popups accessible from opportunity cards and Plan View, with 40/30/20/10 weighted factors,
+estimated startup cost, risks, assumptions, and questions to verify. AI inputs and fictional demo values are labelled accurately.
+Versioned explanation JSON is saved on new opportunities and restored with the guest session.
+One nullable database column preserves compatibility: old results show explanation unavailable, and missing costs remain unknown.
+The local database was backed up before the additive schema application; all existing row counts were preserved.
+Adviser export, plan refinement, usefulness evaluation, and public deployment remain future priorities, not part of this change.
+
+Verification: 138 tests (26 shared, 75 server, 37 client); lint and workspace typechecks pass.
+Server coverage: 95.26% lines, 93.38% branches, above the 80% gate. Production build passes.
+Existing fictional opportunities were enriched without resetting any task progress; live guest records were verified unchanged.
+Older live sessions deliberately remain without explanation details. New live analysis is needed to obtain new AI estimates.
+Restart the backend after Prisma regeneration. Review/commit/push and a fresh GitHub run remain release steps.
+
+Explanation layout refinement: explanations now open in a full-screen overlay rendered outside the card grid, with Back, Close, Escape, focus trapping/restoration, and independent scrolling. Opening one explanation no longer stretches neighboring cards.
+
+Explanation visual polish: gradient overview and fit ring, icon-led estimate cards, accessible score bars, risk/assumption/question cards, section-jump buttons, and a return action. Responsive layouts preserve the full-screen popup and keyboard focus behavior.

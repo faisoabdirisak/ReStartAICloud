@@ -24,7 +24,7 @@ Session also holds selectedOpportunityId. Cascading deletion removes the session
 Task completion is persisted through PATCH `/api/sessions/me/progress`; the dashboard computes percentages from completed items.
 Streaks count consecutive UTC calendar days ending today or yesterday with at least one currently completed task.
 Undoing completion removes its timestamp from that calculation. Re-checking a task records a new completion time.
-The original profile, dedicated cost/risk fields, and scoring inputs are not stored by the current database schema.
+The original profile is not stored. New opportunities store a versioned explanation JSON text column containing cost/risk estimates, assumptions, verification questions, and scoring signals. Older rows remain null; malformed or unsupported explanations are safely projected as null.
 
 ## Guest identity and demo
 
@@ -44,3 +44,11 @@ The production runtime uses tsx and requires installed development dependencies.
 Most Vitest route tests mock Prisma and Gemini; SDK-boundary tests mock the Google SDK. A disposable SQLite integration test verifies actual
 schema setup, persistence, ownership and deletion. No test establishes a live provider connection or a production database migration. Coverage is a useful regression measure, not proof of correctness.
 The user has manually exercised navigation, restored progress, demo separation, and streak behavior in the local application.
+
+## Version-1 explanation boundary
+
+`shared/src/explanation.ts` defines bounds and the canonical score breakdown. `server/src/lib/scoring.ts` delegates to it,
+so the API and explanation panel use identical normalization and weights. `server/src/lib/explanation.ts` constructs
+and validates the persisted envelope. The UI never accepts a model-supplied final score or raw HTML.
+The synthetic demo builder constructs consistent, explicitly fictional inputs matching its sample scores.
+Schema application adds a nullable column and preserves existing opportunity and progress records.

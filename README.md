@@ -14,6 +14,7 @@ Developed with love by Faiso for the IBM AI Challenge.
 
 - Submit a fictional or non-sensitive profile to generate three ranked opportunities.
 - Explore career pivots, upskilling, and micro-business ideas with 12 action items over 30 days.
+- Open Explain My Opportunity in a full-screen popup for weighted score factors, estimated cost, risks, assumptions, and verification questions.
 - Save recommendations, an opportunity selection, and task progress in a browser-specific guest session.
 - View dashboard completion and a UTC-calendar-day activity streak.
 - Try Maria, James, and Aisha's fictional demo profiles without a Gemini request.
@@ -101,7 +102,7 @@ See [deployment instructions](docs/DEPLOYMENT.md). No public deployment is creat
 - SQLite stores recommendations, plan items, selection, and completion timestamps. The browser holds a 30-day HttpOnly guest cookie.
 - No accounts, cross-device access, password recovery, or automatic database expiry/retention cleanup.
 - Losing the cookie makes the saved session inaccessible through the UI; back up storage appropriately and use fictional data for judging.
-- Standalone `estimatedCostUSD`, `risks`, and scoring signal fields are currently not persisted; saved content is limited to the schema documented in the API reference.
+- New analyses save a validated version-1 explanation with estimated costs, risks, assumptions, verification questions, and scoring signals. Older saved opportunities remain intact and show explanation unavailable. Missing estimates remain unknown rather than being replaced with zero.
 - SQLite on one persistent instance is the prototype deployment model, not a horizontally scaled service.
 - The separate `gemini-test` folder is outside this application and must not be included in its repository.
 
@@ -112,3 +113,15 @@ See [deployment instructions](docs/DEPLOYMENT.md). No public deployment is creat
 - [API reference](docs/API.md)
 - [Contributing and verification](docs/CONTRIBUTING.md)
 - [Route security review and remaining limits](docs/SECURITY.md)
+
+## Explain My Opportunity
+
+Select Explain My Opportunity on a card or in Plan View. It opens a full-screen popup with Back and Close controls; Escape also returns you to the previous view. It shows fixed score weights (40/30/20/10),
+normalized factor ratings and contributed points, then a rounded fit score. AI still estimates the inputs;
+this is not independent verification or a success probability. Launch time is an estimate, not a deadline or promise.
+Fictional demo inputs and costs are explicitly labelled synthetic examples.
+
+For existing installations, back up SQLite before `npm run db:push --workspace=server` and regenerate Prisma Client.
+The schema adds one nullable `Opportunity.explanationJson` text column. Do not reset the database or use `--accept-data-loss`.
+Existing rows need no backfill. New AI analyses receive explanation details; the app does not infer missing facts for older results.
+The demo seed includes fictional explanations; seeding refreshes only the three public fictional sessions.

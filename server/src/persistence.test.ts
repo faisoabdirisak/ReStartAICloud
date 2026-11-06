@@ -34,6 +34,7 @@ afterAll(async () => {
 it('persists results, selection and progress, enforces ownership, and deletes only the current guest', async () => {
   const raw = { opportunities: ['career-pivot', 'upskilling', 'micro-business'].map((category, i) => ({
     title: `Fictional opportunity ${i + 1}`, category, summary: 'Fictional summary', reasoning: 'Fictional reasoning',
+    estimatedCostUSD: i === 0 ? 0 : 200, risks: 'Training takes time', assumptions: ['Some study time available'], questionsToVerify: ['Which local requirements apply?'],
     signals: { skillFitPct: 80, affordabilityPct: 70, launchTimeDays: 30, complexityScore: 3 },
     planItems: Array.from({ length: 12 }, (_, j) => ({ day: j + 1, week: Math.floor(j / 3) + 1, title: `Task ${j + 1}` })),
   })) };
@@ -50,6 +51,16 @@ it('persists results, selection and progress, enforces ownership, and deletes on
   expect(restored.body.opportunities[0].planItems[0].isCompleted).toBe(true);
   expect(restored.body.opportunities[0].planItems[0].completedAt).toBeTruthy();
   expect(restored.body.cookieToken).toBeUndefined();
+  expect(restored.body.opportunities[0].explanation).toEqual(created.body.opportunities[0].explanation);
+  expect(restored.body.opportunities[0].explanation.source).toBe('ai-estimate');
+  expect(restored.body.opportunities[0].explanation.estimatedCostUSD).toBe(0);
+  expect(restored.body.opportunities[0].explanation.assumptions).toEqual(['Some study time available']);
+  const saved = await prisma.opportunity.findUniqueOrThrow({ where: { id: opportunity.id } });
+  await prisma.opportunity.update({ where: { id: opportunity.id }, data: { explanationJson: null } });
+  const legacy = await guest.get('/api/sessions/me');
+  expect(legacy.body.opportunities[0].explanation).toBeNull();
+  expect(legacy.body.opportunities[0].feasibilityScore).toBe(saved.feasibilityScore);
+  expect(legacy.body.opportunities[0].planItems[0].isCompleted).toBe(true);
   const other = request.agent(app);
   expect((await other.post('/api/analyze').send(profile)).status).toBe(200);
   expect((await other.patch('/api/sessions/me/progress').send({ planItemId: opportunity.planItems[0].id, isCompleted: false })).status).toBe(403);

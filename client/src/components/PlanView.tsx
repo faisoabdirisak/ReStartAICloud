@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, Circle, ExternalLink, Calendar } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
 import { FeasibilityRing } from './FeasibilityRing';
+import { OpportunityExplanation } from './OpportunityExplanation';
 import { CategoryBadge } from './CategoryBadge';
 
 interface PlanViewProps {
@@ -64,6 +65,8 @@ export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) 
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark bg-surface-elevated-light dark:bg-surface-elevated-dark">
             <p className="text-sm text-muted leading-relaxed">{reasoning}</p>
           </div>
+
+          <div className="px-6 py-3"><OpportunityExplanation opportunity={opportunity} /></div>
 
           {/* Progress bar */}
           <div className="px-6 py-3 border-b border-border-light dark:border-border-dark">

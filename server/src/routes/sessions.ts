@@ -1,3 +1,4 @@
+import { readExplanation } from '../lib/explanation.js';
 /**
  * Session routes — restore, update progress, select opportunity, clear.
  *
@@ -58,6 +59,7 @@ function buildSessionResponse(dbSession: SessionWithRelations | null): Session |
       reasoning: opp.reasoning,
       feasibilityScore: opp.feasibilityScore,
       rank: opp.rank,
+      explanation: readExplanation(opp.explanationJson),
       planItems: opp.planItems.map((item): PlanItem => ({
         id: item.id,
         day: item.day,

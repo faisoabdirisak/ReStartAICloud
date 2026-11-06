@@ -1,3 +1,4 @@
+import { readExplanation, createExplanation } from '../lib/explanation.js';
 import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import {
@@ -82,6 +83,7 @@ analyzeRouter.post('/', async (req, res) => {
             reasoning: raw.reasoning,
             feasibilityScore: scores[i],
             rank: ranks[i],
+            explanationJson: JSON.stringify(createExplanation(raw)),
             planItems: {
               create: raw.planItems.map((item) => ({
                 day: item.day,
@@ -115,6 +117,7 @@ analyzeRouter.post('/', async (req, res) => {
       reasoning: opp.reasoning,
       feasibilityScore: opp.feasibilityScore,
       rank: opp.rank,
+      explanation: readExplanation(opp.explanationJson),
       planItems: opp.planItems.map((item): PlanItem => ({
         id: item.id,
         day: item.day,
