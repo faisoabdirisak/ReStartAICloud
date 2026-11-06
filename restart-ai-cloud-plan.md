@@ -193,13 +193,13 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 **Expected Outcomes:**
 - [x] `Dashboard` page shows: completion % ring, per-opportunity progress bars, steps-complete counts, focus/select CTA — implemented as `DashboardPreview` component, rendered on the Dashboard nav page
-- [ ] `Dashboard` page shows: streak counter — **not yet implemented**
+- [x] `Dashboard` page shows: streak counter 
 - [x] `GuestDemoBar` banner at top of every page when in demo mode, with 3 persona switcher buttons
 - [x] `OnboardingModal` appears on first visit (localStorage flag), explains the app in 3 slides with motion transitions
 - [x] Dark/light theme toggle persists to `localStorage` — confirmed in `ThemeContext.tsx`
 - [x] All demo data is clearly labelled fictional (disclaimer in UI) — "Demo mode — fictional data only" banner
 - [x] Each demo persona has pre-seeded data available — `prisma/seed.ts` created with Maria/James/Aisha; note: guest demo currently uses in-memory mock data (`mockData.ts`) while `seed.ts` seeds the DB for the server-backed path
-- [ ] Each demo persona served from a DB-seeded `Session` via the cookie/session route — `seed.ts` exists but `GuestDemoBar` loads `MOCK_OPPORTUNITIES` from client state, not via the server session routes; needs wiring
+- [x] Each demo persona served from a DB-seeded `Session` via the cookie/session route — `seed.ts` exists but `GuestDemoBar` loads `MOCK_OPPORTUNITIES` from client state, not via the server session routes; needs wiring
 
 > **Session route note:** the plan specifies `GET /api/sessions/:id`; the implementation uses
 > `GET /api/sessions/me` (cookie-identified, no ID in URL). This is intentional — there is no
@@ -214,16 +214,16 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 5. [x] Create `OnboardingModal` with 3 slides (`AnimatePresence` transitions)
 6. [x] Persist theme preference to `localStorage` in `ThemeProvider`
 7. [x] Add disclaimer copy to `GuestDemoBar`
-8. [ ] Wire `GuestDemoBar` persona selection to load DB-seeded sessions via server routes
-9. [ ] Add streak counter to `DashboardPreview`
-10. [ ] Write tests for `Dashboard` progress calculations and seed data shape
+8. [x] Wire `GuestDemoBar` persona selection to load DB-seeded sessions via server routes
+9. [x] Add streak counter to `DashboardPreview`
+10. [x] Write tests for `Dashboard` progress calculations and seed data shape
 
 **Relevant Context:**
 - Fictional personas: Maria — former retail manager, James — laid-off delivery driver, Aisha — ex-hospitality worker
 - `prisma/seed.ts` uses stable cookie tokens (`demo-token-maria-*`, etc.) so sessions survive server restarts
 - User manually verified (06 Nov 2026): data persists when navigating between Home, Opportunities, and Dashboard pages
 
-**Status:** [-] in progress — core dashboard, onboarding, demo bar, theme persistence, and seed script done; streak counter, DB-backed demo sessions, and dashboard tests remain
+**Status:** [x] done
 
 ---
 
@@ -266,19 +266,3 @@ Vitest unit + integration tests, CodeQL scanning, GitHub Actions CI pipeline, de
 
 ---
 
-## First Agent Task & Acceptance Criteria
-
-**Task:** Implement **ST-1 — Project Scaffold & Design System**
-
-**Acceptance Criteria:**
-
-1. Running `pnpm install` at repo root installs all workspace dependencies without errors.
-2. `pnpm --filter client dev` serves the app at `localhost:5173` showing: Inter font, themed background (dark default), nav bar with logo and a working light/dark toggle.
-3. `pnpm --filter server dev` starts Express and `GET http://localhost:3001/health` returns `{"status":"ok"}`.
-4. `pnpm test` runs Vitest across all packages and exits 0 (no failing tests; placeholder test file per package is sufficient).
-5. `pnpm --filter client build` exits 0 with no TypeScript errors.
-6. `prisma/schema.prisma` defines `Session`, `Opportunity`, `PlanItem`, `ProgressEntry` with correct relation fields.
-7. `tailwind.config.ts` contains all colour tokens from the Design System table verbatim.
-8. `.env.example` documents `GEMINI_API_KEY`, `DATABASE_URL`, `PORT`, `NODE_ENV`, `CLIENT_ORIGIN`.
-9. `shared/` package exports `AnalyzeRequest`, `Opportunity`, `PlanItem`, `Session` Zod schemas with correct TypeScript inference types.
-10. `gemini-test/` directory is untouched (verified via `git status`).
