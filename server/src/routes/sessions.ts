@@ -6,6 +6,7 @@
  */
 import { Router } from 'express';
 import { Prisma } from '@prisma/client';
+import { z } from 'zod';
 import {
   ProgressUpdateSchema,
   SelectOpportunitySchema,
@@ -15,6 +16,17 @@ import {
 } from '@restart-ai/shared';
 import { prisma } from '../lib/db.js';
 import { getSessionToken, clearSessionCookie } from '../lib/session.js';
+
+// Stable demo cookie tokens — must match prisma/seed.ts
+const DEMO_TOKENS: Record<string, string> = {
+  maria: 'demo-token-maria-retail-manager',
+  james: 'demo-token-james-delivery-driver',
+  aisha: 'demo-token-aisha-hospitality',
+};
+
+const DemoRequestSchema = z.object({
+  personaId: z.enum(['maria', 'james', 'aisha']),
+});
 
 type SessionWithRelations = Prisma.SessionGetPayload<{
   include: { opportunities: { include: { planItems: { include: { progressEntry: true } } } } };
@@ -53,6 +65,7 @@ function buildSessionResponse(dbSession: SessionWithRelations | null): Session |
         description: item.description ?? undefined,
         resourceUrl: item.resourceUrl ?? undefined,
         isCompleted: item.progressEntry?.isCompleted ?? false,
+        completedAt: item.progressEntry?.completedAt ?? null,
       })),
     }))
     .sort((a, b) => a.rank - b.rank);
@@ -169,6 +182,35 @@ sessionsRouter.patch('/me/select', async (req, res) => {
   }
 
   res.status(204).end();
+});
+
+// ── POST /api/sessions/demo — load a seeded demo persona (read-only, no cookie) ──
+// Returns the fictional session data without touching the caller's live cookie.
+// The client holds this in React state only — nothing is persisted or overwritten.
+sessionsRouter.post('/demo', async (req, res) => {
+  const parsed = DemoRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid persona. Must be maria, james, or aisha.' });
+    return;
+  }
+
+  const token = DEMO_TOKENS[parsed.data.personaId];
+  const dbSession = await prisma.session.findUnique({
+    where: { cookieToken: token },
+    include: {
+      opportunities: {
+        include: { planItems: { include: { progressEntry: true } } },
+      },
+    },
+  }).catch(() => null);
+
+  if (!dbSession) {
+    res.status(404).json({ error: 'Demo data not found. Run npm run db:seed in server/ first.' });
+    return;
+  }
+
+  // Deliberately do NOT set or modify any cookie — live session is untouched
+  res.json(buildSessionResponse(dbSession));
 });
 
 // ── DELETE /api/sessions/me — clear session (start over) ────────────────────

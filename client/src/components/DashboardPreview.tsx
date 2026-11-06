@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, TrendingUp, BarChart3, Target, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Target, AlertTriangle, Flame } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
 import { FeasibilityRing } from './FeasibilityRing';
 import { CategoryBadge } from './CategoryBadge';
@@ -8,6 +8,8 @@ import { CategoryBadge } from './CategoryBadge';
 interface DashboardPreviewProps {
   opportunities: Opportunity[];
   selectedOpportunityId: string | null;
+  /** Consecutive-day streak computed from completedAt timestamps */
+  streak: number;
   onViewPlan: (id: string) => void;
   onSelectOpp: (id: string | null) => void;
   onStartOver: () => void;
@@ -16,6 +18,7 @@ interface DashboardPreviewProps {
 export function DashboardPreview({
   opportunities,
   selectedOpportunityId,
+  streak,
   onViewPlan,
   onSelectOpp,
   onStartOver,
@@ -29,15 +32,11 @@ export function DashboardPreview({
     0
   );
   const overallPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-  const avgScore =
-    opportunities.length > 0
-      ? Math.round(opportunities.reduce((s, o) => s + o.feasibilityScore, 0) / opportunities.length)
-      : 0;
 
   const STATS = [
     { label: 'Opportunities', value: String(opportunities.length), icon: TrendingUp, color: 'text-primary' },
     { label: 'Steps Complete', value: `${completedItems}/${totalItems}`, icon: CheckCircle2, color: 'text-success' },
-    { label: 'Avg. Score', value: String(avgScore), icon: BarChart3, color: 'text-warning' },
+    { label: 'Day Streak', value: streak > 0 ? `${streak}🔥` : '0', icon: Flame, color: streak > 0 ? 'text-warning' : 'text-muted' },
     { label: 'Overall', value: `${overallPct}%`, icon: Target, color: 'text-primary' },
   ];
 

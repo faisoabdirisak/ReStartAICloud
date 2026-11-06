@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { AnalyzeRequestSchema, getFeasibilityTier, OpportunitySchema } from './index.js';
+import {
+  AnalyzeRequestSchema,
+  getFeasibilityTier,
+  OpportunitySchema,
+  computeStreak,
+} from './index.js';
 
 describe('AnalyzeRequestSchema', () => {
   it('accepts valid input', () => {
@@ -101,5 +106,73 @@ describe('OpportunitySchema', () => {
       planItems: [],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const completedItem = (completedAt: Date) => ({ isCompleted: true, completedAt });
+const pendingItem = () => ({ isCompleted: false as const, completedAt: null });
+
+// Fixed "now" for all streak tests: 2026-11-06T12:00:00Z
+const NOW = new Date('2026-11-06T12:00:00Z');
+const day = (iso: string) => new Date(iso);
+
+describe('computeStreak', () => {
+  it('returns 0 when no items exist', () => {
+    expect(computeStreak([], NOW)).toBe(0);
+  });
+
+  it('returns 0 when all items are pending (isCompleted false)', () => {
+    expect(computeStreak([pendingItem(), pendingItem()], NOW)).toBe(0);
+  });
+
+  it('returns 0 when isCompleted true but completedAt is null', () => {
+    expect(computeStreak([{ isCompleted: true, completedAt: null }], NOW)).toBe(0);
+  });
+
+  it('returns 1 when only today has a completion', () => {
+    expect(computeStreak([completedItem(day('2026-11-06T08:00:00Z'))], NOW)).toBe(1);
+  });
+
+  it('returns 1 when only yesterday has a completion (streak still alive)', () => {
+    expect(computeStreak([completedItem(day('2026-11-05T23:00:00Z'))], NOW)).toBe(1);
+  });
+
+  it('returns 0 when last completion was two days ago (broken streak)', () => {
+    expect(computeStreak([completedItem(day('2026-11-04T10:00:00Z'))], NOW)).toBe(0);
+  });
+
+  it('returns 3 for three consecutive days ending today', () => {
+    const items = [
+      completedItem(day('2026-11-04T09:00:00Z')),
+      completedItem(day('2026-11-05T09:00:00Z')),
+      completedItem(day('2026-11-06T09:00:00Z')),
+    ];
+    expect(computeStreak(items, NOW)).toBe(3);
+  });
+
+  it('counts only the tail run when there is a gap', () => {
+    const items = [
+      completedItem(day('2026-11-01T09:00:00Z')), // gap — isolated
+      completedItem(day('2026-11-05T09:00:00Z')),
+      completedItem(day('2026-11-06T09:00:00Z')),
+    ];
+    expect(computeStreak(items, NOW)).toBe(2);
+  });
+
+  it('deduplicates multiple completions on the same calendar day', () => {
+    const items = [
+      completedItem(day('2026-11-06T06:00:00Z')),
+      completedItem(day('2026-11-06T14:00:00Z')), // same UTC day
+    ];
+    expect(computeStreak(items, NOW)).toBe(1);
+  });
+
+  it('unchecked items (completedAt null) do not contribute to the streak', () => {
+    const items = [
+      pendingItem(),
+      completedItem(day('2026-11-06T09:00:00Z')),
+    ];
+    expect(computeStreak(items, NOW)).toBe(1);
   });
 });

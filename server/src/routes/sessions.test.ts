@@ -239,3 +239,52 @@ describe('DELETE /api/sessions/me', () => {
     expect(vi.mocked(prisma.session.delete)).not.toHaveBeenCalled();
   });
 });
+
+// ── POST /api/sessions/demo ───────────────────────────────────────────────────
+describe('POST /api/sessions/demo', () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it('returns 400 for unknown persona id', async () => {
+    const res = await request(app)
+      .post('/api/sessions/demo')
+      .send({ personaId: 'unknown' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 when seeded session not in DB', async () => {
+    vi.mocked(prisma.session.findUnique).mockResolvedValue(null);
+    const res = await request(app)
+      .post('/api/sessions/demo')
+      .send({ personaId: 'maria' });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns session data for a valid seeded persona', async () => {
+    vi.mocked(prisma.session.findUnique).mockResolvedValue(MOCK_DB_SESSION as never);
+    const res = await request(app)
+      .post('/api/sessions/demo')
+      .send({ personaId: 'maria' });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('session-1');
+    expect(res.body.opportunities).toBeDefined();
+  });
+
+  it('does NOT set or modify the live session cookie', async () => {
+    vi.mocked(prisma.session.findUnique).mockResolvedValue(MOCK_DB_SESSION as never);
+    const res = await request(app)
+      .post('/api/sessions/demo')
+      .send({ personaId: 'james' });
+    expect(res.status).toBe(200);
+    // No Set-Cookie header — live session must not be affected
+    const setCookie = res.headers['set-cookie'];
+    expect(setCookie).toBeUndefined();
+  });
+
+  it('does NOT expose cookieToken in the response', async () => {
+    vi.mocked(prisma.session.findUnique).mockResolvedValue(MOCK_DB_SESSION as never);
+    const res = await request(app)
+      .post('/api/sessions/demo')
+      .send({ personaId: 'aisha' });
+    expect(JSON.stringify(res.body)).not.toContain('cookieToken');
+  });
+});

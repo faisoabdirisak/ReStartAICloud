@@ -26,6 +26,7 @@ function AppContent() {
     opportunities,
     selectedOpportunityId,
     activePersonaId,
+    streak,
     apiError,
     fieldErrors,
     lastFormValues,
@@ -201,6 +202,7 @@ function AppContent() {
                 <DashboardPreview
                   opportunities={opportunities}
                   selectedOpportunityId={selectedOpportunityId}
+                  streak={streak}
                   onViewPlan={(id) => setActivePlanId(id)}
                   onSelectOpp={selectOpp}
                   onStartOver={startOver}

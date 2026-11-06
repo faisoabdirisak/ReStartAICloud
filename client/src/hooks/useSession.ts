@@ -7,14 +7,16 @@
  * Demo sessions are held in separate, non-persisted state: switching to demo
  * does NOT replace the live session, and returning from demo restores it.
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Opportunity, AnalyzeRequest } from '@restart-ai/shared';
+import { computeStreak } from '@restart-ai/shared';
 import {
   analyzeProfile,
   restoreSession,
   updateProgress,
   selectOpportunity,
   clearSession,
+  loadDemoSession,
   ApiError,
 } from '../lib/api';
 import { MOCK_OPPORTUNITIES, MOCK_PERSONAS } from '../data/mockData';
@@ -33,6 +35,8 @@ export interface UseSessionReturn {
   opportunities: Opportunity[];
   selectedOpportunityId: string | null;
   activePersonaId: string | null;
+  /** Consecutive-day streak from completedAt timestamps across all plan items */
+  streak: number;
   apiError: string | null;
   fieldErrors: Partial<Record<keyof AnalyzeRequest, string[]>> | undefined;
   lastFormValues: Partial<AnalyzeRequest> | undefined;
@@ -144,9 +148,16 @@ export function useSession(): UseSessionReturn {
     }
   }, []);
 
+  // ── Streak (memoised — recomputed only when opportunities change) ─────────
+  const streak = useMemo(() => {
+    const allItems = opportunities.flatMap((o) => o.planItems);
+    return computeStreak(allItems);
+  }, [opportunities]);
+
   // ── Demo ──────────────────────────────────────────────────────────────────
   const startDemo = useCallback((personaId: string) => {
-    if (!MOCK_PERSONAS.find((p) => p.id === personaId)) return;
+    const persona = MOCK_PERSONAS.find((p) => p.id === personaId);
+    if (!persona) return;
 
     // Stash live session before overwriting state
     if (status === 'ready' && sessionId) {
@@ -155,11 +166,20 @@ export function useSession(): UseSessionReturn {
 
     setActivePersonaId(personaId);
     setStatus('loading');
-    setTimeout(() => {
-      setOpportunities(MOCK_OPPORTUNITIES);
-      setSelectedOpportunityId(null);
-      setStatus('demo');
-    }, 1000);
+
+    // Try to load the DB-seeded session; fall back to in-memory mock if seed not run
+    loadDemoSession(personaId as 'maria' | 'james' | 'aisha')
+      .then((session) => {
+        setOpportunities(session ? session.opportunities : MOCK_OPPORTUNITIES);
+        setSelectedOpportunityId(session?.selectedOpportunityId ?? null);
+        setStatus('demo');
+      })
+      .catch(() => {
+        // Network error — fall back to mock data so demo always works
+        setOpportunities(MOCK_OPPORTUNITIES);
+        setSelectedOpportunityId(null);
+        setStatus('demo');
+      });
   }, [status, sessionId, opportunities, selectedOpportunityId]);
 
   const stopDemo = useCallback(() => {
@@ -201,6 +221,7 @@ export function useSession(): UseSessionReturn {
     opportunities,
     selectedOpportunityId,
     activePersonaId,
+    streak,
     apiError,
     fieldErrors,
     lastFormValues,

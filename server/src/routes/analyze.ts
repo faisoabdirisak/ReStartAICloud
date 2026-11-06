@@ -123,6 +123,7 @@ analyzeRouter.post('/', async (req, res) => {
         description: item.description ?? undefined,
         resourceUrl: item.resourceUrl ?? undefined,
         isCompleted: item.progressEntry?.isCompleted ?? false,
+        completedAt: item.progressEntry?.completedAt ?? null,
       })),
     }))
     .sort((a, b) => a.rank - b.rank);

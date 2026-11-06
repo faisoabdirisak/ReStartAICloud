@@ -95,3 +95,22 @@ export async function selectOpportunity(body: SelectOpportunity): Promise<void> 
 export async function clearSession(): Promise<void> {
   return apiFetch<void>('/api/sessions/me', { method: 'DELETE' });
 }
+
+/**
+ * Load a seeded demo persona's session from the server.
+ * Does NOT set or modify any cookie — the live session is completely untouched.
+ * Returns null if the seed data has not been run yet (404).
+ */
+export async function loadDemoSession(
+  personaId: 'maria' | 'james' | 'aisha',
+): Promise<Session | null> {
+  try {
+    return await apiFetch<Session>('/api/sessions/demo', {
+      method: 'POST',
+      body: JSON.stringify({ personaId }),
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
