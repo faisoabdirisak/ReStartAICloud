@@ -114,3 +114,10 @@ export async function loadDemoSession(
     throw err;
   }
 }
+
+export async function refinePlan(opportunityId: string, constraints: import('@restart-ai/shared').RefinementConstraints, revision?: string) {
+  return apiFetch<{ original: import('@restart-ai/shared').Opportunity; refined: import('@restart-ai/shared').Opportunity; revision: string }>('/api/sessions/me/refine', {
+    method: 'POST',
+    body: JSON.stringify({ opportunityId, constraints, revision }),
+  });
+}

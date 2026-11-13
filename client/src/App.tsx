@@ -32,6 +32,7 @@ function AppContent() {
     lastFormValues,
     submitProfile,
     togglePlanItem,
+    applyRefinement,
     selectOpp,
     startDemo,
     stopDemo,
@@ -203,6 +204,7 @@ function AppContent() {
                 <DashboardPreview
                   opportunities={opportunities}
                   selectedOpportunityId={selectedOpportunityId}
+                  demo={demoActive}
                   streak={streak}
                   onViewPlan={(id) => setActivePlanId(id)}
                   onSelectOpp={selectOpp}
@@ -231,6 +233,8 @@ function AppContent() {
             opportunity={activePlan}
             onClose={() => setActivePlanId(null)}
             onToggleItem={togglePlanItem}
+            demo={demoActive}
+            onRefine={applyRefinement}
           />
         )}
       </AnimatePresence>

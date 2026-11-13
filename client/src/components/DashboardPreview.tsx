@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, TrendingUp, Target, AlertTriangle, Flame } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
 import { FeasibilityRing } from './FeasibilityRing';
+import { AdviserHandoff } from './AdviserHandoff';
 import { CategoryBadge } from './CategoryBadge';
 
 interface DashboardPreviewProps {
   opportunities: Opportunity[];
   selectedOpportunityId: string | null;
+  demo?: boolean;
   /** Consecutive-day streak computed from completedAt timestamps */
   streak: number;
   onViewPlan: (id: string) => void;
@@ -18,6 +20,7 @@ interface DashboardPreviewProps {
 export function DashboardPreview({
   opportunities,
   selectedOpportunityId,
+  demo = false,
   streak,
   onViewPlan,
   onSelectOpp,
@@ -26,6 +29,7 @@ export function DashboardPreview({
   const [activeTab, setActiveTab] = useState<'overview' | 'progress'>('overview');
   const [confirmClear, setConfirmClear] = useState(false);
 
+  const focused = opportunities.find((opportunity) => opportunity.id === selectedOpportunityId);
   const totalItems = opportunities.reduce((s, o) => s + o.planItems.length, 0);
   const completedItems = opportunities.reduce(
     (s, o) => s + o.planItems.filter((p) => p.isCompleted).length,
@@ -95,6 +99,16 @@ export function DashboardPreview({
           )}
         </div>
       </div>
+
+      {focused && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
+          <div>
+            <p className="text-sm font-semibold text-app">Adviser handoff</p>
+            <p className="text-sm text-muted">{focused.title}</p>
+          </div>
+          <AdviserHandoff key={focused.id} opportunity={focused} demo={demo} />
+        </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

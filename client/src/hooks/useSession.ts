@@ -43,6 +43,7 @@ export interface UseSessionReturn {
   submitProfile: (data: AnalyzeRequest) => Promise<void>;
   togglePlanItem: (itemId: string, completed: boolean) => Promise<void>;
   selectOpp: (id: string | null) => Promise<void>;
+  applyRefinement: (opportunity: Opportunity) => void;
   startDemo: (personaId: string) => void;
   stopDemo: () => void;
   startOver: () => Promise<void>;
@@ -251,6 +252,15 @@ export function useSession(): UseSessionReturn {
     lastFormValues,
     submitProfile,
     togglePlanItem,
+    applyRefinement: (refined) => {
+      const guidance = new Map(refined.planItems.map((item) => [item.id, item.description]));
+      setOpportunities((current) => current.map((item) => item.id === refined.id ? {
+        ...item,
+        planItems: item.planItems.map((task) => guidance.has(task.id)
+          ? { ...task, description: guidance.get(task.id) }
+          : task),
+      } : item));
+    },
     selectOpp,
     startDemo,
     stopDemo,

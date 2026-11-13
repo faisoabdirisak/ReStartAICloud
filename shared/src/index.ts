@@ -15,7 +15,7 @@ export const PlanItemSchema = z.object({
   day: z.number().int().min(1).max(30),
   week: z.number().int().min(1).max(4),
   title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
+  description: z.string().max(1500).optional(),
   resourceUrl: ResourceUrlSchema.optional(),
   isCompleted: z.boolean().default(false),
   /** ISO timestamp set when isCompleted becomes true; null when unchecked */
@@ -195,3 +195,5 @@ export function computeStreak(
 export { createDemoOpportunities, DEMO_PERSONA_IDS, type DemoPersonaId } from './demo.js';
 
 export { OpportunityExplanationSchema, ScoringSignalsSchema, calculateScoreBreakdown, type OpportunityExplanation, type ScoringSignals } from './explanation.js';
+
+export { RefinementConstraints, refineRemainingTasks } from './refinement.js';

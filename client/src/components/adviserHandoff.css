@@ -1,0 +1,129 @@
+.handoff-dialog {
+  width: min(50rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: 1rem;
+  background: #fff;
+  color: #172033;
+  color-scheme: light;
+  overscroll-behavior: contain;
+}
+
+.handoff-dialog::backdrop {
+  background: rgb(15 23 42 / 65%);
+}
+
+.handoff-toolbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #d8dfeb;
+  background: #fff;
+}
+
+.handoff-report {
+  padding: clamp(1rem, 4vw, 2rem);
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.handoff-report h1 {
+  font-size: 1.85rem;
+  font-weight: 750;
+  line-height: 1.15;
+  margin: 0.25rem 0;
+}
+.handoff-report h2 {
+  margin: 1rem 0 0.3rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-bottom: 1px solid #d8dfeb;
+}
+.handoff-report h3 {
+  margin: 0.65rem 0 0.25rem;
+  font-weight: 700;
+}
+.handoff-kicker {
+  color: #4338a0;
+  font-weight: 700;
+}
+.handoff-note,
+.handoff-stat {
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 3px solid #6055ad;
+  background: #f4f3fa;
+}
+.handoff-report table {
+  width: 100%;
+  margin-bottom: 0.35rem;
+  text-align: left;
+}
+.handoff-report td,
+.handoff-report th {
+  padding: 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.handoff-report ul,
+.handoff-report ol {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+.handoff-report ul {
+  list-style: disc;
+}
+.handoff-report ol {
+  list-style: decimal;
+}
+.handoff-report li + li {
+  margin-top: 0.3rem;
+}
+
+@media print {
+  @page adviser-handoff {
+    margin: 14mm;
+  }
+  html:has(.handoff-dialog[open]),
+  body:has(.handoff-dialog[open]) {
+    background: #fff !important;
+    color-scheme: light;
+  }
+  body:has(.handoff-dialog[open]) > :not(.handoff-dialog[open]) {
+    display: none !important;
+  }
+  .handoff-dialog[open] {
+    page: adviser-handoff;
+    position: static;
+    inset: auto;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+  .handoff-dialog::backdrop {
+    display: none;
+  }
+  .handoff-toolbar {
+    display: none;
+  }
+  .handoff-report {
+    padding: 0;
+    font-size: 10pt;
+  }
+  .handoff-report h2,
+  .handoff-report h3 {
+    break-after: avoid;
+  }
+  .handoff-report li,
+  .handoff-report tr,
+  .handoff-week {
+    break-inside: avoid;
+  }
+}

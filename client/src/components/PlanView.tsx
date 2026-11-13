@@ -1,3 +1,4 @@
+import { PlanRefinement } from './PlanRefinement';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, Circle, ExternalLink, Calendar } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
@@ -8,10 +9,12 @@ import { CategoryBadge } from './CategoryBadge';
 interface PlanViewProps {
   opportunity: Opportunity;
   onClose: () => void;
+  demo?: boolean;
+  onRefine?: (opportunity: Opportunity) => void;
   onToggleItem: (itemId: string, completed: boolean) => void | Promise<void>;
 }
 
-export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) {
+export function PlanView({ opportunity, onClose, onToggleItem, demo = false, onRefine }: PlanViewProps) {
   const { title, category, feasibilityScore, reasoning, planItems } = opportunity;
 
   // Group by week
@@ -68,6 +71,8 @@ export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) 
 
           <div className="px-6 py-3"><OpportunityExplanation opportunity={opportunity} /></div>
 
+          {onRefine && <div className="px-6 py-3"><PlanRefinement opportunity={opportunity} demo={demo} onApply={onRefine} /></div>}
+
           {/* Progress bar */}
           <div className="px-6 py-3 border-b border-border-light dark:border-border-dark">
             <div className="h-2 rounded-full bg-surface-elevated-light dark:bg-surface-elevated-dark overflow-hidden">
@@ -117,6 +122,7 @@ export function PlanView({ opportunity, onClose, onToggleItem }: PlanViewProps) 
                         >
                           {item.title}
                         </span>
+                        {item.description && <p className="whitespace-pre-line text-xs text-muted">{item.description}</p>}
                         {item.resourceUrl && (
                           <a
                             href={item.resourceUrl}

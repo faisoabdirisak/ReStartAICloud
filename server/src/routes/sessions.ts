@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { RefinementConstraints, refineRemainingTasks } from '@restart-ai/shared';
 import { readExplanation } from '../lib/explanation.js';
 /**
  * Session routes — restore, update progress, select opportunity, clear.
@@ -232,4 +234,50 @@ sessionsRouter.delete('/me', asyncHandler(async (req, res) => {
 
   clearSessionCookie(res);
   res.status(204).end();
+}));
+
+const refineRequest = z.object({
+  opportunityId: z.string().min(1).max(200),
+  constraints: RefinementConstraints,
+  revision: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+});
+
+sessionsRouter.post('/me/refine', asyncHandler(async (req, res) => {
+  const token = getSessionToken(req);
+  if (!token) {
+    res.status(401).json({ error: 'Guest session required.' });
+    return;
+  }
+  const parsed = refineRequest.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Enter a valid budget and weekly schedule.' });
+    return;
+  }
+
+  const { opportunityId, constraints, revision } = parsed.data;
+  const result = await prisma.$transaction(async (tx) => {
+    const row = await tx.session.findUnique({
+      where: { cookieToken: token },
+      include: { opportunities: { where: { id: opportunityId }, include: { planItems: { include: { progressEntry: true } } } } },
+    });
+    const opportunity = buildSessionResponse(row)?.opportunities[0];
+    if (!opportunity) return null;
+    const current = [...opportunity.planItems].sort((a, b) => a.id.localeCompare(b.id));
+    const fingerprint = createHash('sha256').update(JSON.stringify({ opportunityId, current, constraints })).digest('hex');
+    if (revision && revision !== fingerprint) return 'stale' as const;
+
+    const refined = { ...opportunity, planItems: refineRemainingTasks(opportunity.planItems, constraints) };
+    if (revision) {
+      for (const item of refined.planItems) {
+        if (!item.isCompleted) {
+          await tx.planItem.update({ where: { id: item.id }, data: { description: item.description } });
+        }
+      }
+    }
+    return { original: opportunity, refined, revision: fingerprint };
+  });
+
+  if (!result) res.status(404).json({ error: 'Opportunity unavailable.' });
+  else if (result === 'stale') res.status(409).json({ error: 'The plan changed. Generate a new preview.' });
+  else res.json(result);
 }));

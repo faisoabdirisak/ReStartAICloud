@@ -61,8 +61,24 @@ it('persists results, selection and progress, enforces ownership, and deletes on
   expect(legacy.body.opportunities[0].explanation).toBeNull();
   expect(legacy.body.opportunities[0].feasibilityScore).toBe(saved.feasibilityScore);
   expect(legacy.body.opportunities[0].planItems[0].isCompleted).toBe(true);
+  const refinePath = '/api/sessions/me/refine';
+  const input = { opportunityId: opportunity.id, constraints: { budget: 0, hours: 1 } };
+  const preview = await guest.post(refinePath).send(input);
+  expect(preview.status).toBe(200);
+  expect(preview.body.refined.planItems.find((item: { id: string }) => item.id === opportunity.planItems[0].id))
+    .toEqual(legacy.body.opportunities[0].planItems.find((item: { id: string }) => item.id === opportunity.planItems[0].id));
+  const unchanged = await guest.get('/api/sessions/me');
+  expect(unchanged.body.opportunities[0].planItems).toEqual(legacy.body.opportunities[0].planItems);
+  expect((await guest.patch('/api/sessions/me/progress').send({ planItemId: opportunity.planItems[1].id, isCompleted: true })).status).toBe(204);
+  expect((await guest.post(refinePath).send({ ...input, revision: preview.body.revision })).status).toBe(409);
+  const fresh = await guest.post(refinePath).send(input);
+  expect((await guest.post(refinePath).send({ ...input, revision: fresh.body.revision })).status).toBe(200);
+  const after = (await guest.get('/api/sessions/me')).body.opportunities[0];
+  expect(after.planItems.filter((item: { isCompleted: boolean }) => item.isCompleted)).toHaveLength(2);
+  expect(after.planItems.find((item: { id: string }) => item.id === opportunity.planItems[2].id).description).toContain('Use free resources');
   const other = request.agent(app);
   expect((await other.post('/api/analyze').send(profile)).status).toBe(200);
+  expect((await other.post(refinePath).send(input)).status).toBe(404);
   expect((await other.patch('/api/sessions/me/progress').send({ planItemId: opportunity.planItems[0].id, isCompleted: false })).status).toBe(403);
   expect((await guest.delete('/api/sessions/me')).status).toBe(204);
   expect((await guest.get('/api/sessions/me')).status).toBe(204);
