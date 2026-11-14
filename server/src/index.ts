@@ -1,3 +1,5 @@
+import { resumeRouter } from './routes/resume.js';
+import { evaluationsRouter } from './routes/evaluations.js';
 import express, { type ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -59,6 +61,8 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/api/resume', resumeRouter);
+app.use('/api/evaluations', evaluationsRouter);
 app.use('/api/analyze', analyzeLimiter, analyzeRouter);
 app.use('/api/sessions', rateLimit({
   windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false,

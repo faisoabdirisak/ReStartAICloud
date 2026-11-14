@@ -200,3 +200,25 @@ describe('DashboardPreview — start over', () => {
     expect(onStartOver).not.toHaveBeenCalled();
   });
 });
+
+it('opens the earliest unfinished task and advances when it is completed', async () => {
+  const opportunity = makeOpp('next', 1);
+  const [later, first, complete] = opportunity.planItems;
+  opportunity.planItems = [
+    { ...later, day: 10, week: 2 },
+    { ...first, day: 3, description: 'Use free resources for this step.' },
+    { ...complete, day: 1, isCompleted: true },
+  ];
+  const onViewPlan = vi.fn();
+  const props = { ...DEFAULT_PROPS, selectedOpportunityId: opportunity.id, onViewPlan };
+  const { rerender } = render(<DashboardPreview {...props} opportunities={[opportunity]} />);
+  expect(screen.getByText(first.title)).toBeVisible();
+  expect(screen.getByText('Use free resources for this step.')).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: 'Open task' }));
+  expect(onViewPlan).toHaveBeenCalledWith(opportunity.id, first.id);
+
+  const updated = { ...opportunity, planItems: opportunity.planItems.map((task) =>
+    task.id === first.id ? { ...task, isCompleted: true } : task) };
+  rerender(<DashboardPreview {...props} opportunities={[updated]} />);
+  expect(screen.getByText(later.title)).toBeVisible();
+});

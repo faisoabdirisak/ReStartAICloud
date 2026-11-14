@@ -12,7 +12,10 @@ export function buildAnalyzePrompt(profile: AnalyzeRequest): string {
 IMPORTANT RULES:
 - Respond with ONLY valid JSON — no markdown, no code fences, no extra text.
 - Generate EXACTLY 3 distinct opportunities.
-- Each opportunity must have EXACTLY 12 planItems spread across weeks 1–4 (days 1–30).
+- Each opportunity must have exactly 12 planItems: one task at each of the following slots and no additional tasks.
+  Week 1: days 1, 3, 5. Week 2: days 8, 10, 12. Week 3: days 15, 17, 19. Week 4: days 22, 26, 30.
+- Count the tasks before responding: three tasks per week, twelve per opportunity, thirty-six overall.
+- Keep task titles concise. Add a short description only when it clarifies the next action.
 - Do NOT include a feasibility score — that will be calculated separately.
 - All cost estimates are unverified approximations. Label as such in reasoning.
 - Give 2–4 explicit assumptions and 2–4 questions the user should verify before acting.
@@ -27,6 +30,8 @@ PARTICIPANT PROFILE:
 - Current role: ${profile.currentRole}
 - Skills: ${profile.skills}
 - Experience: ${profile.experience}
+${profile.education ? `- Education and qualifications: ${profile.education}` : ''}
+${profile.urgency ? `- Career transition timeline: ${profile.urgency}` : ''}
 - Location: ${profile.location}
 - Startup budget (USD): ${profile.startupBudget}
 ${profile.interests ? `- Interests: ${profile.interests}` : ''}
@@ -53,7 +58,7 @@ REQUIRED JSON STRUCTURE (respond with ONLY this, no other text):
       },
       "planItems": [
         { "day": 1, "week": 1, "title": "string", "description": "string (optional)" },
-        ... exactly 12 items total, days 1–30, weeks 1–4
+        ... one item for each of the remaining eleven slots specified above
       ]
     },
     ... exactly 3 opportunities

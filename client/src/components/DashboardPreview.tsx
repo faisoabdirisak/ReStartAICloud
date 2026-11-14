@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, TrendingUp, Target, AlertTriangle, Flame } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Target, AlertTriangle, Flame, ArrowRight } from 'lucide-react';
 import type { Opportunity } from '@restart-ai/shared';
 import { FeasibilityRing } from './FeasibilityRing';
 import { AdviserHandoff } from './AdviserHandoff';
@@ -12,7 +12,7 @@ interface DashboardPreviewProps {
   demo?: boolean;
   /** Consecutive-day streak computed from completedAt timestamps */
   streak: number;
-  onViewPlan: (id: string) => void;
+  onViewPlan: (id: string, taskId?: string) => void;
   onSelectOpp: (id: string | null) => void;
   onStartOver: () => void;
 }
@@ -30,6 +30,9 @@ export function DashboardPreview({
   const [confirmClear, setConfirmClear] = useState(false);
 
   const focused = opportunities.find((opportunity) => opportunity.id === selectedOpportunityId);
+  const nextTask = focused?.planItems
+    .filter((task) => !task.isCompleted)
+    .sort((a, b) => a.day - b.day)[0];
   const totalItems = opportunities.reduce((s, o) => s + o.planItems.length, 0);
   const completedItems = opportunities.reduce(
     (s, o) => s + o.planItems.filter((p) => p.isCompleted).length,
@@ -99,6 +102,35 @@ export function DashboardPreview({
           )}
         </div>
       </div>
+
+      {focused ? (
+        <section aria-labelledby="next-step-heading" className="rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6">
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl bg-primary/10 p-2.5 text-primary"><Target size={20} aria-hidden="true" /></span>
+            <div>
+              <h3 id="next-step-heading" className="text-lg font-bold text-app">My Next Step</h3>
+              <p className="text-sm text-muted">{focused.title}</p>
+            </div>
+          </div>
+          {nextTask ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs font-semibold text-primary">Week {nextTask.week} · Day {nextTask.day}</p>
+              <p className="font-semibold text-app">{nextTask.title}</p>
+              {nextTask.description && <p className="whitespace-pre-line break-words text-sm text-muted">{nextTask.description.trim()}</p>}
+              <button type="button" onClick={() => onViewPlan(focused.id, nextTask.id)}
+                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                Open task <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm font-medium text-app">{focused.planItems.length ? 'All tasks in this plan are complete.' : 'This plan has no tasks yet.'}</p>
+          )}
+        </section>
+      ) : opportunities.length > 0 && (
+        <p className="rounded-xl border border-border-light p-4 text-sm text-muted dark:border-border-dark">
+          Choose Focus on an opportunity in Overview to see your next task here.
+        </p>
+      )}
 
       {focused && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4">

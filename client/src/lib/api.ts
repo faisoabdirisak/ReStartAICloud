@@ -6,7 +6,12 @@
  * Errors are surfaced as ApiError instances with a human-readable message.
  * Raw server errors are never shown verbatim to the user.
  */
-import type { AnalyzeRequest, Session, ProgressUpdate, SelectOpportunity } from '@restart-ai/shared';
+import type {
+  AnalyzeRequest,
+  Session,
+  ProgressUpdate,
+  SelectOpportunity,
+} from '@restart-ai/shared';
 
 export class ApiError extends Error {
   constructor(
@@ -44,16 +49,23 @@ async function apiFetch<T>(path: string, init: RequestInit): Promise<T> {
           ? 'Session not found or access denied. Please start over.'
           : res.status === 429
             ? 'Too many requests. Please wait a moment before trying again.'
-            : res.status >= 500
-              ? 'The AI service is temporarily unavailable. Please try again shortly.'
-              : 'Something went wrong. Please try again.';
+            : res.status === 502 &&
+                (body.error === 'AI response did not match expected format. Please try again.' ||
+                  body.error === 'AI returned malformed data. Please try again.')
+              ? 'The AI returned an incomplete or invalid plan. Please try generating your recommendations again.'
+              : res.status === 500 &&
+                  body.error === 'Failed to save your results. Please try again.'
+                ? 'Your recommendations were generated, but could not be saved. Please try again.'
+                : res.status >= 500
+                  ? 'The AI service is temporarily unavailable. Please try again shortly.'
+                  : 'Something went wrong. Please try again.';
     throw new ApiError(message, res.status, body.details);
   }
 
   return body as T;
 }
 
-/** Submit profile → Gemini → returns Session (also sets HttpOnly cookie) */
+/** Submit profile → AI analysis → returns Session (also sets HttpOnly cookie) */
 export async function analyzeProfile(profile: AnalyzeRequest): Promise<Session> {
   return apiFetch<Session>('/api/analyze', {
     method: 'POST',
@@ -102,7 +114,7 @@ export async function clearSession(): Promise<void> {
  * Returns null if the seed data has not been run yet (404).
  */
 export async function loadDemoSession(
-  personaId: 'maria' | 'james' | 'aisha',
+  personaId: 'maria' | 'james' | 'aisha'
 ): Promise<Session | null> {
   try {
     return await apiFetch<Session>('/api/sessions/demo', {
@@ -115,9 +127,30 @@ export async function loadDemoSession(
   }
 }
 
-export async function refinePlan(opportunityId: string, constraints: import('@restart-ai/shared').RefinementConstraints, revision?: string) {
-  return apiFetch<{ original: import('@restart-ai/shared').Opportunity; refined: import('@restart-ai/shared').Opportunity; revision: string }>('/api/sessions/me/refine', {
+export async function refinePlan(
+  opportunityId: string,
+  constraints: import('@restart-ai/shared').RefinementConstraints,
+  revision?: string
+) {
+  return apiFetch<{
+    original: import('@restart-ai/shared').Opportunity;
+    refined: import('@restart-ai/shared').Opportunity;
+    revision: string;
+  }>('/api/sessions/me/refine', {
     method: 'POST',
     body: JSON.stringify({ opportunityId, constraints, revision }),
+  });
+}
+
+export function listEvaluations() {
+  return apiFetch<import('@restart-ai/shared').PublicEvaluation[]>('/api/evaluations', {
+    method: 'GET',
+  });
+}
+
+export function submitEvaluation(input: import('@restart-ai/shared').EvaluationInput) {
+  return apiFetch<import('@restart-ai/shared').PublicEvaluation>('/api/evaluations', {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }

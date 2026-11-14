@@ -108,6 +108,7 @@ const MOCK_AI_RESPONSE = {
 
 describe('POST /api/analyze', () => {
   beforeEach(() => {
+    vi.stubEnv('AI_PROVIDER', 'gemini');
     vi.mocked(generateContent).mockReset();
   });
 

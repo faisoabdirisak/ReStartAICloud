@@ -62,6 +62,8 @@ export const AnalyzeRequestSchema = z.object({
   currentRole: z.string().min(1).max(200),
   skills: z.string().min(1).max(1000),
   experience: z.string().min(1).max(500),
+  education: z.string().max(500).optional(),
+  urgency: z.string().max(200).optional(),
   location: z.string().min(1).max(200),
   /** USD, 0 = no budget / bootstrapping */
   startupBudget: z.number().int().min(0).max(1_000_000).default(0),
@@ -197,3 +199,5 @@ export { createDemoOpportunities, DEMO_PERSONA_IDS, type DemoPersonaId } from '.
 export { OpportunityExplanationSchema, ScoringSignalsSchema, calculateScoreBreakdown, type OpportunityExplanation, type ScoringSignals } from './explanation.js';
 
 export { RefinementConstraints, refineRemainingTasks } from './refinement.js';
+
+export { EvaluationInputSchema, type EvaluationInput, type PublicEvaluation } from './evaluation.js';

@@ -16,6 +16,7 @@ let prisma: (typeof import('./lib/db.js'))['prisma'];
 beforeAll(async () => {
   vi.stubEnv('DATABASE_URL', `file:${database.replaceAll('\\', '/')}`);
   vi.stubEnv('NODE_ENV', 'test');
+  vi.stubEnv('AI_PROVIDER', 'gemini');
   writeFileSync(database, '');
   const root = fileURLToPath(new URL('../../', import.meta.url));
   execFileSync(process.execPath, [path.join(root, 'node_modules/prisma/build/index.js'), 'db', 'push',
@@ -76,6 +77,31 @@ it('persists results, selection and progress, enforces ownership, and deletes on
   const after = (await guest.get('/api/sessions/me')).body.opportunities[0];
   expect(after.planItems.filter((item: { isCompleted: boolean }) => item.isCompleted)).toHaveLength(2);
   expect(after.planItems.find((item: { id: string }) => item.id === opportunity.planItems[2].id).description).toContain('Use free resources');
+  const evaluation = {
+    opportunityId: opportunity.id, name: 'Example Reviewer', role: 'Lecturer',
+    affiliation: 'Example College', reviewerCode: 'PRIVATE-01', fit: 'Well',
+    reason: 'Uses transferable skills', firstStep: 'Compare requirements',
+    usefulness: 'Useful', reportChanges: 'Add a time estimate', friction: '', publish: true,
+  };
+  expect((await request(app).post('/api/evaluations').send(evaluation)).status).toBe(401);
+  expect((await guest.post('/api/evaluations').send({ ...evaluation, publish: false })).status).toBe(400);
+  expect((await guest.post('/api/evaluations').send({ ...evaluation, opportunityId: 'unknown' })).status).toBe(404);
+  const review = await guest.post('/api/evaluations').send(evaluation);
+  expect(review.status).toBe(201);
+  expect(review.body).toMatchObject({ name: evaluation.name, opportunityTitle: opportunity.title, firstStep: evaluation.firstStep });
+  const feed = await request(app).get('/api/evaluations');
+  expect(feed.body).toContainEqual(review.body);
+  expect(JSON.stringify(feed.body)).not.toContain('PRIVATE-01');
+  const demoReview = await request(app).post('/api/evaluations').send({
+    ...evaluation, opportunityId: 'demo-james-opp-1', demoPersona: 'james',
+  });
+  expect(demoReview.status).toBe(201);
+  expect(demoReview.body).toMatchObject({ source: 'james', opportunityTitle: 'Fleet & Logistics Coordinator' });
+  expect((await request(app).post('/api/evaluations').send({
+    ...evaluation, opportunityId: 'demo-james-opp-1', demoPersona: 'maria',
+  })).status).toBe(404);
+  const combinedFeed = await request(app).get('/api/evaluations');
+  expect(combinedFeed.body).toEqual(expect.arrayContaining([review.body, demoReview.body]));
   const other = request.agent(app);
   expect((await other.post('/api/analyze').send(profile)).status).toBe(200);
   expect((await other.post(refinePath).send(input)).status).toBe(404);

@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Moon, Sun, Zap, Menu, X, Home, LayoutDashboard, Compass } from 'lucide-react';
+import { Moon, Sun, Zap, Menu, X, Home, LayoutDashboard, Compass, ClipboardList, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 
-type NavPage = 'home' | 'opportunities' | 'dashboard';
+type NavPage = 'home' | 'opportunities' | 'dashboard' | 'evaluation' | 'about';
 
 interface NavBarProps {
   currentPage: NavPage;
@@ -14,6 +14,8 @@ const NAV_ITEMS: { id: NavPage; label: string; icon: typeof Home }[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'opportunities', label: 'Opportunities', icon: Compass },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'evaluation', label: 'Evaluation', icon: ClipboardList },
+  { id: 'about', label: 'About', icon: Info },
 ];
 
 export function ThemeToggle() {
@@ -46,7 +48,7 @@ export function NavBar({ currentPage, onNavigate }: NavBarProps) {
         </button>
 
         {/* Desktop nav */}
-        <div className="hidden sm:flex items-center gap-1" role="list">
+        <div className="hidden md:flex items-center gap-1" role="list">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -69,7 +71,7 @@ export function NavBar({ currentPage, onNavigate }: NavBarProps) {
           <ThemeToggle />
           {/* Mobile menu toggle */}
           <button
-            className="sm:hidden p-2 rounded-lg text-muted hover:bg-surface-elevated-light dark:hover:bg-surface-elevated-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="md:hidden p-2 rounded-lg text-muted hover:bg-surface-elevated-light dark:hover:bg-surface-elevated-dark transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             onClick={() => setMobileOpen((o) => !o)}
             aria-expanded={mobileOpen}
             aria-label="Toggle mobile menu"
@@ -88,7 +90,7 @@ export function NavBar({ currentPage, onNavigate }: NavBarProps) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="sm:hidden overflow-hidden border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark"
+            className="md:hidden overflow-hidden border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark"
           >
             <div className="px-4 py-3 space-y-1">
               {NAV_ITEMS.map(({ id, label, icon: Icon }) => (

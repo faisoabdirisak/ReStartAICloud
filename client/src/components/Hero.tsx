@@ -50,9 +50,33 @@ export function Hero({ onGetStarted, onTryDemo }: HeroProps) {
           viewBox="0 0 800 600"
           preserveAspectRatio="xMidYMid slice"
         >
-          <ellipse cx="400" cy="300" rx="300" ry="200" fill="none" stroke="currentColor" strokeWidth="1" />
-          <ellipse cx="400" cy="300" rx="200" ry="140" fill="none" stroke="currentColor" strokeWidth="1" />
-          <ellipse cx="400" cy="300" rx="100" ry="70" fill="none" stroke="currentColor" strokeWidth="1" />
+          <ellipse
+            cx="400"
+            cy="300"
+            rx="300"
+            ry="200"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+          />
+          <ellipse
+            cx="400"
+            cy="300"
+            rx="200"
+            ry="140"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+          />
+          <ellipse
+            cx="400"
+            cy="300"
+            rx="100"
+            ry="70"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1"
+          />
         </svg>
       </div>
 
@@ -66,12 +90,11 @@ export function Hero({ onGetStarted, onTryDemo }: HeroProps) {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-medium text-primary">
             <Sparkles size={12} />
-            IBM AI Challenge · Gemini-Powered
+            IBM AI Challenge · AI-powered career planning
           </div>
 
           <h1 id="hero-heading" className="text-4xl sm:text-5xl font-bold text-app leading-tight">
-            Find Your{' '}
-            <span className="text-primary">Next Chapter</span>
+            Find Your <span className="text-primary">Next Chapter</span>
             <br />
             with AI Clarity
           </h1>
@@ -93,7 +116,7 @@ export function Hero({ onGetStarted, onTryDemo }: HeroProps) {
               "
               aria-label="Get started with your profile"
             >
-              Get Started Free
+              Start My Career Journey
               <ArrowRight size={16} />
             </button>
             <button
@@ -115,8 +138,12 @@ export function Hero({ onGetStarted, onTryDemo }: HeroProps) {
           <div className="flex items-center gap-4 text-xs text-muted pt-2">
             <div className="flex items-center gap-1.5">
               <div className="flex -space-x-1.5">
-                {['#6366F1','#10B981','#F59E0B'].map((c) => (
-                  <div key={c} className="w-6 h-6 rounded-full border-2 border-surface-light dark:border-surface-dark" style={{ backgroundColor: c }} />
+                {['#6366F1', '#10B981', '#F59E0B'].map((c) => (
+                  <div
+                    key={c}
+                    className="w-6 h-6 rounded-full border-2 border-surface-light dark:border-surface-dark"
+                    style={{ backgroundColor: c }}
+                  />
                 ))}
               </div>
               <span>3 demo personas ready</span>
@@ -151,14 +178,19 @@ export function Hero({ onGetStarted, onTryDemo }: HeroProps) {
               transition={{ delay, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
               whileHover={{ scale: 1.05, transition: { duration: 0.15 } }}
             >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}18` }}>
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: `${color}18` }}
+              >
                 <Icon size={16} style={{ color }} />
               </div>
               <div>
                 <div className="text-xs font-semibold text-app leading-none">{sub}</div>
                 <div className="text-[10px] text-muted mt-0.5">{label}</div>
               </div>
-              <div className="text-sm font-bold tabular-nums" style={{ color }}>{score}</div>
+              <div className="text-sm font-bold tabular-nums" style={{ color }}>
+                {score}
+              </div>
             </motion.div>
           ))}
         </motion.div>

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { PlanRefinement } from './PlanRefinement';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, Circle, ExternalLink, Calendar } from 'lucide-react';
@@ -10,12 +11,20 @@ interface PlanViewProps {
   opportunity: Opportunity;
   onClose: () => void;
   demo?: boolean;
+  initialTaskId?: string;
   onRefine?: (opportunity: Opportunity) => void;
   onToggleItem: (itemId: string, completed: boolean) => void | Promise<void>;
 }
 
-export function PlanView({ opportunity, onClose, onToggleItem, demo = false, onRefine }: PlanViewProps) {
+export function PlanView({ opportunity, onClose, onToggleItem, demo = false, onRefine, initialTaskId }: PlanViewProps) {
   const { title, category, feasibilityScore, reasoning, planItems } = opportunity;
+
+  const initialTaskButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const button = initialTaskButton.current;
+    button?.scrollIntoView?.({ block: 'center' });
+    button?.focus({ preventScroll: true });
+  }, [initialTaskId]);
 
   // Group by week
   const weeks = [1, 2, 3, 4];
@@ -102,9 +111,10 @@ export function PlanView({ opportunity, onClose, onToggleItem, demo = false, onR
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: wi * 0.05 }}
-                      className="flex items-start gap-3 group"
+                      className={`flex items-start gap-3 group ${item.id === initialTaskId ? 'rounded-lg bg-primary/10 p-2 ring-1 ring-primary/30' : ''}`}
                     >
                       <button
+                        ref={item.id === initialTaskId ? initialTaskButton : undefined}
                         onClick={() => onToggleItem(item.id, !item.isCompleted)}
                         className="mt-0.5 flex-shrink-0 text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors"
                         aria-pressed={item.isCompleted}

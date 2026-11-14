@@ -30,7 +30,7 @@ describe('AppShell', () => {
 
   it('renders nav', () => {
     renderShell();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
   });
 
   it('does not show demo bar when demoActive=false', () => {

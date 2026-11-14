@@ -8,6 +8,7 @@ import {
   type PlanItem,
   type Session,
 } from '@restart-ai/shared';
+import { generateGraniteContent } from '../lib/granite.js';
 import { generateContent, GeminiError } from '../lib/gemini.js';
 import { computeFeasibilityScore, assignRanks } from '../lib/scoring.js';
 import { buildAnalyzePrompt } from '../prompts/analyze.js';
@@ -32,10 +33,14 @@ analyzeRouter.post('/', async (req, res) => {
   }
   const profile = parsed.data;
 
-  // 2. Build prompt and call Gemini
+  // 2. Build the prompt and call the configured provider
   let rawText: string;
   try {
-    rawText = await generateContent(buildAnalyzePrompt(profile));
+    const provider = process.env.AI_PROVIDER || 'gemini';
+    const prompt = buildAnalyzePrompt(profile);
+    if (provider === 'granite') rawText = await generateGraniteContent(prompt);
+    else if (provider === 'gemini') rawText = await generateContent(prompt);
+    else throw new Error('Unknown AI provider');
   } catch (err) {
     if (err instanceof GeminiError) {
       res.status(502).json({ error: 'AI service unavailable. Please try again shortly.' });

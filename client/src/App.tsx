@@ -1,3 +1,6 @@
+import { AboutPage } from './components/AboutPage';
+import { OpportunityComparison } from './components/OpportunityComparison';
+import { LecturerFeedback } from './components/LecturerFeedback';
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ThemeProvider } from './context/ThemeContext';
@@ -12,13 +15,19 @@ import { OnboardingModal } from './components/OnboardingModal';
 import { MOCK_PERSONAS } from './data/mockData';
 import { useSession } from './hooks/useSession';
 
-type NavPage = 'home' | 'opportunities' | 'dashboard';
+type NavPage = 'home' | 'opportunities' | 'dashboard' | 'evaluation' | 'about';
 
 const ONBOARDING_KEY = 'restart-ai-onboarding-done';
 
 function AppContent() {
   const [page, setPage] = useState<NavPage>('home');
-  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [startWritingFeedback, setStartWritingFeedback] = useState(false);
+  const [comparisonBudget, setComparisonBudget] = useState<number>();
+  const [planView, setPlanView] = useState<{ id: string; taskId?: string } | null>(null);
+
+  function openPlan(id: string, taskId?: string) {
+    setPlanView({ id, taskId });
+  }
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const {
@@ -59,7 +68,7 @@ function AppContent() {
   };
 
   const handleSelectPersona = (id: string) => {
-    setActivePlanId(null);
+    setPlanView(null);
     startDemo(id);
     setPage('opportunities');
   };
@@ -68,9 +77,7 @@ function AppContent() {
     stopDemo();
   };
 
-  const activePlan = activePlanId
-    ? opportunities.find((o) => o.id === activePlanId) ?? null
-    : null;
+  const activePlan = opportunities.find((item) => item.id === planView?.id);
 
   const demoActive = status === 'demo' || (status === 'loading' && activePersonaId !== null);
 
@@ -83,6 +90,8 @@ function AppContent() {
     page === 'opportunities' &&
     status === 'restoring';
 
+  const showEvaluationOptions = status === 'ready' || status === 'demo';
+
   const showResults =
     page === 'opportunities' &&
     (status === 'ready' || status === 'demo') &&
@@ -92,13 +101,15 @@ function AppContent() {
     <>
       <AppShell
         currentPage={page}
-        onNavigate={setPage}
+        onNavigate={(destination) => { setStartWritingFeedback(false); setPage(destination); }}
         demoActive={demoActive}
         activePersonaId={activePersonaId}
         onSelectPersona={handleSelectPersona}
         onDismissDemo={handleDismissDemo}
       >
         <AnimatePresence mode="wait">
+          {page === 'about' && <AboutPage key="about" onTryDemo={handleTryDemo} />}
+          {page === 'evaluation' && <LecturerFeedback key="evaluation" opportunities={showEvaluationOptions ? opportunities : []} focusedId={selectedOpportunityId} demoPersona={demoActive ? activePersonaId ?? undefined : undefined} startWriting={startWritingFeedback} />}
           {page === 'home' && (
             <motion.div
               key="home"
@@ -137,7 +148,7 @@ function AppContent() {
                     <p className="text-sm text-muted mt-1">
                       {activePersonaId
                         ? 'Preparing fictional demo data.'
-                        : 'Gemini is analysing your profile. This takes 10–20 seconds.'}
+                        : 'AI is analysing your profile and building your 30-day plans. This can take up to a minute.'}
                     </p>
                   </div>
                   <SkeletonCards />
@@ -154,6 +165,10 @@ function AppContent() {
                         {demoActive ? 'Fictional fit scores · Demo progress stays in this tab' : 'Fit scores out of 100 · Plan progress is tracked separately'}
                       </p>
                     </div>
+                    <button type="button" onClick={() => { setStartWritingFeedback(true); setPage('evaluation'); }}
+                      className="rounded-lg border border-primary/25 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10">
+                      Give feedback
+                    </button>
                     {!demoActive && (
                       <button
                         onClick={() => startOver()}
@@ -163,14 +178,27 @@ function AppContent() {
                       </button>
                     )}
                   </div>
+                  {opportunities.length >= 2 && (
+                    <OpportunityComparison
+                      key={opportunities.map((item) => item.id).join(':')}
+                      opportunities={opportunities}
+                      budget={demoActive ? undefined : comparisonBudget}
+                      focusedId={selectedOpportunityId}
+                      onFocus={selectOpp}
+                      error={apiError}
+                    />
+                  )}
                   <OpportunityGrid
                     opportunities={opportunities}
-                    onViewPlan={(id) => setActivePlanId(id)}
+                    onViewPlan={openPlan}
                   />
                 </div>
               ) : (status === 'empty' || status === 'error') && !demoActive ? (
                 <ProfileForm
-                  onSubmit={submitProfile}
+                  onSubmit={async (profile) => {
+                    setComparisonBudget(profile.startupBudget);
+                    await submitProfile(profile);
+                  }}
                   loading={false}
                   error={apiError}
                   fieldErrors={fieldErrors}
@@ -206,7 +234,7 @@ function AppContent() {
                   selectedOpportunityId={selectedOpportunityId}
                   demo={demoActive}
                   streak={streak}
-                  onViewPlan={(id) => setActivePlanId(id)}
+                  onViewPlan={openPlan}
                   onSelectOpp={selectOpp}
                   onStartOver={startOver}
                 />
@@ -231,7 +259,8 @@ function AppContent() {
           <PlanView
             key={activePlan.id}
             opportunity={activePlan}
-            onClose={() => setActivePlanId(null)}
+            initialTaskId={planView?.taskId}
+            onClose={() => setPlanView(null)}
             onToggleItem={togglePlanItem}
             demo={demoActive}
             onRefine={applyRefinement}

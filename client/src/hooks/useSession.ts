@@ -100,7 +100,7 @@ export function useSession(): UseSessionReturn {
     return () => { cancelled = true; };
   }, []);
 
-  // ── Submit profile to Gemini ──────────────────────────────────────────────
+  // ── Submit profile for AI analysis ──────────────────────────────────────────────
   const submitProfile = useCallback(async (data: AnalyzeRequest) => {
     setStatus('loading');
     setApiError(null);
@@ -148,6 +148,7 @@ export function useSession(): UseSessionReturn {
 
   const selectOpp = useCallback(async (id: string | null) => {
     const previous = selectedOpportunityId;
+    setApiError(null);
     setSelectedOpportunityId(id);
     if (activeDemoRef.current) return;
     try {

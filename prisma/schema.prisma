@@ -58,3 +58,22 @@ model ProgressEntry {
   completedAt DateTime?
   updatedAt   DateTime  @updatedAt
 }
+
+model Evaluation {
+  source           String   @default("live")
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  opportunityTitle String
+  name             String
+  role             String
+  affiliation      String
+  reviewerCode     String
+  fit              String
+  reason           String
+  firstStep        String
+  usefulness       String
+  reportChanges    String
+  friction         String
+
+  @@index([createdAt])
+}
