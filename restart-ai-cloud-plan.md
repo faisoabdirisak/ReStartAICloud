@@ -16,6 +16,12 @@ No authentication in the MVP. A "Guest Demo" mode loads fictional personas so ju
 
 ---
 
+## IBM tools and implementation status
+
+IBM Bob was Faiso's primary AI development assistant during the challenge build. Bob helped implement and debug the application across the foundation, analysis, persistence, dashboard, and CI stages. Faiso directed the work and exercised the user journeys.
+
+The original milestones below describe the Gemini implementation. The current app can use IBM Granite through watsonx.ai for both résumé interpretation and opportunity generation. The résumé intake path can use hosted Docling for document conversion and uses local extraction when the service is unavailable. Workers review extracted details before requesting opportunities. See the [README](README.md) for setup and verification status.
+
 ## Architecture
 
 ```
@@ -29,11 +35,12 @@ restart-ai-cloud/
 ```
 
 **Data flow:**
-1. Client form → POST `/api/analyze` → Zod validation → Gemini API call → structured JSON → Prisma save → response
-2. Client restores GET `/api/sessions/me` using an HttpOnly cookie → renders cards + plan
-3. Progress updates → PATCH `/api/sessions/me/progress`
+1. Optional résumé upload → Docling or local extraction → AI draft → worker review.
+2. Confirmed profile → POST `/api/analyze` → Zod validation → configured model → structured JSON → Prisma save → response
+3. Client restores GET `/api/sessions/me` using an HttpOnly cookie → renders cards + plan
+4. Progress updates → PATCH `/api/sessions/me/progress`
 
-The separate `gemini-test/` folder is outside this application repository. Raw profile form fields are sent to Gemini but not saved in SQLite; generated results and task progress are saved.
+The separate `gemini-test/` folder is outside this application repository. The configured model receives the profile. SQLite stores generated results and task progress.
 
 ---
 

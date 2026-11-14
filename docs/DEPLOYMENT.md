@@ -8,7 +8,8 @@ This repository supports a **single Express process with SQLite on persistent st
 2. Install using `npm ci` (development dependencies are required by the current tsx runtime).
 3. Run `npm run build` to create `client/dist`; server/shared build scripts typecheck rather than emit standalone JavaScript.
 4. Inject server-only environment variables through the host's secret manager:
-   `GEMINI_API_KEY`, `GEMINI_MODEL`, `NODE_ENV=production`, `CLIENT_ORIGIN=https://your-public-host`,
+   Set `AI_PROVIDER` and the matching provider settings from the [README](../README.md). Also set
+   `NODE_ENV=production`, `CLIENT_ORIGIN=https://your-public-host`,
    `DATABASE_URL=file:/absolute/persistent/path/restart.db`, and the host's `PORT`.
 5. Run `npm run db:generate --workspace=server` if the host did not generate Prisma Client during install.
 6. Back up any existing database, inspect schema changes, then run `npm run db:push --workspace=server` as a controlled release step.

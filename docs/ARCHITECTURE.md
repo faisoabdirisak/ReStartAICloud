@@ -6,10 +6,16 @@
 `prisma/schema.prisma` defines SQLite persistence. npm workspaces and the root lockfile are the dependency source of truth.
 The separate `gemini-test` directory is outside this repository; the application neither imports nor requires it.
 
+## Résumé intake
+
+The profile page offers manual entry and résumé-assisted entry. Selecting a file shows its name locally. **Analyze My Résumé** sends the file to `POST /api/resume?interpret=true`. The server checks the MIME type, file signature, and size before processing.
+
+When enabled, hosted Docling converts the file to Markdown. The adapter submits a job, polls for completion, and retrieves the Markdown artifact. If Docling is unavailable, PDF.js or Mammoth extracts text on the server. The configured model interprets a bounded excerpt, with common contact patterns removed, into validated draft fields. Recognizable document labels provide a fallback if interpretation fails. The worker reviews and confirms the editable draft before generating recommendations. The résumé endpoint returns the draft without saving a guest session.
+
 ## Analysis flow
 
 1. ProfileForm validates a non-sensitive profile and posts JSON to `/api/analyze`.
-2. The server validates bounds, builds a prompt, and calls Gemini using a server-only environment key.
+2. The server validates bounds, builds a prompt, and calls the configured provider using server-only credentials. Granite uses the watsonx.ai chat endpoint and IBM Cloud IAM authentication. Gemini uses the Google Gen AI SDK.
 3. JSON fences are removed and the model output is validated: exactly three opportunities, each with 12 plan items.
 4. TypeScript computes a rounded score: skill fit 40%, affordability 30%, launch speed 20%, simplicity 10%.
    Launch speed maps 1 day to 100 and 365 days to 0; simplicity maps complexity 1 to 100 and 10 to 0.
@@ -41,7 +47,7 @@ The production runtime uses tsx and requires installed development dependencies.
 
 ## Boundaries of verification
 
-Most Vitest route tests mock Prisma and Gemini; SDK-boundary tests mock the Google SDK. A disposable SQLite integration test verifies actual
+Vitest route tests simulate model and hosted Docling responses, and résumé tests exercise local PDF extraction. A disposable SQLite integration test verifies actual
 schema setup, persistence, ownership and deletion. No test establishes a live provider connection or a production database migration. Coverage is a useful regression measure, not proof of correctness.
 The user has manually exercised navigation, restored progress, demo separation, and streak behavior in the local application.
 

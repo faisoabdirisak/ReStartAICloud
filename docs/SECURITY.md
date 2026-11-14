@@ -27,7 +27,7 @@ Reviewed locally on 6 November 2026. This is a source review and automated regre
 
 ## Remaining limits before broader use
 
-- Profile text is sent to Gemini and may reappear in generated results. Do not collect sensitive information for the challenge demo.
+- Confirmed profile text is sent to the configured model and may reappear in generated results. Résumé analysis sends extracted text to the configured model, and hosted Docling receives the file when enabled. Do not collect sensitive information for the challenge demo.
 - Raw profile fields are not persisted, but generated results are. Cookie expiry does not delete DB records: automatic retention cleanup is not implemented.
 - Cookie loss means no recovery; no accounts or cross-device access. A stolen guest cookie can access that guest's data.
 - Repeated valid analysis creates a new saved session; old sessions need an eventual retention policy.

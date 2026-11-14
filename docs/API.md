@@ -1,14 +1,15 @@
 # API reference
 
 Development base URL: `http://localhost:3001`. The frontend normally uses its same-origin Vite proxy.
-Use `Content-Type: application/json` and include browser credentials. Never put guest tokens into URLs.
+For JSON requests, use `Content-Type: application/json` and include browser credentials. Never put guest tokens into URLs.
 All `/api` responses are marked `Cache-Control: no-store`. Cross-origin browser mutations are rejected.
 
 ## Routes
 
 | Method and path | Input | Success | Key failures |
 | --- | --- | --- | --- |
-| GET `/health` | None | 200 `{ "status": "ok" }` | Health does not check DB or Gemini availability |
+| GET `/health` | None | 200 `{ "status": "ok" }` | Health does not check DB or provider availability |
+| POST `/api/resume?interpret=true` | Raw PDF or DOCX bytes | 200 editable draft | 400 file type or signature, 403 origin, 413 size, 422 unreadable file, 429 rate limit |
 | POST `/api/analyze` | Profile below | 200 Session + Set-Cookie | 400 validation, 403 origin, 413 size, 429 rate limit, 500 save, 502 AI |
 | GET `/api/sessions/me` | Guest cookie | 200 Session, or 204 when absent/unrecognized | 500 storage failure |
 | PATCH `/api/sessions/me/progress` | `{ "planItemId": "...", "isCompleted": true }` | 204 | 400 body, 401 cookie, 403 item ownership, 500 storage |
@@ -16,9 +17,13 @@ All `/api` responses are marked `Cache-Control: no-store`. Cross-origin browser 
 | DELETE `/api/sessions/me` | Guest cookie | 204, clears cookie; deletes owned session if present | 403 origin, 500 storage |
 | POST `/api/sessions/demo` | `{ "personaId": "maria" }` (`james`, `aisha` also allowed) | 200 fictional Session; no cookie changes | 400 persona, 404 not seeded, 500 storage |
 
-AI analysis: 10 requests per 15 minutes per IP. Session endpoints: 120 requests per minute per IP.
+AI analysis: 10 requests per 15 minutes per IP. Résumé intake: 5 requests per 15 minutes per IP. Session endpoints: 120 requests per minute per IP.
 Limits are in-memory per server process. Browser mutations require an allowed Origin when supplied and reject cross-site fetch metadata.
 A non-browser client may omit Origin, but ownership requirements still apply.
+
+## Résumé draft
+
+Send raw bytes with `application/pdf` or `application/vnd.openxmlformats-officedocument.wordprocessingml.document`. The upload limit is 5 MB. With `interpret=true`, the server requests model interpretation. The response includes `draft` with any available `currentRole`, `location`, `skills`, `experience`, `education`, and `interests`; `extraction` as `docling` or `local`; and `interpreted` indicating whether the model supplied usable fields. Missing fields can be filled manually. Submit the confirmed profile separately to `POST /api/analyze`.
 
 ## Profile
 
@@ -36,7 +41,7 @@ A non-browser client may omit Origin, but ownership requirements still apply.
 ```
 
 Required: currentRole (1-200 chars), skills (1-1000), experience (1-500), location (1-200), goals (1-1000).
-Optional: startupBudget (integer USD, 0-1,000,000; default 0), interests (up to 500), constraints (up to 1000).
+Optional: startupBudget (integer USD, 0-1,000,000; default 0), interests (up to 500), constraints (up to 1000), education (up to 500), urgency (up to 200).
 The body limit is 16 KB. Use fictional data; profile contents are sent to the AI provider.
 
 ## Session response
